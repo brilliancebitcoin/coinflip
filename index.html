@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://bitcoincore.tech/apps/bitcoinjs-ui/lib/bitcoinjs-lib.js"></script>
+<script src="https://bundle.run/bip39@3.0.4"></script>
+<script src="https://bundle.run/bip32@2.0.6"></script>
+<script src="https://bundle.run/buffer@6.0.3"></script>
+<script src="https://bundle.run/noble-secp256k1@1.2.14"></script>
+<script src="https://bundle.run/browserify-cipher@1.0.1"></script>
+<script>
+        function computeRawPrivkey( node ) {
+                return bitcoinjs.ECPair.fromPrivateKey( node.privateKey, { network: bitcoinjs.networks.mainnet } );
+        }
+</script>
+<script>
+        function getPrivkeyHex( backupwords, path, index ) {
+                var seed = bip39.mnemonicToSeedSync( backupwords );
+                var node = bip32.fromSeed( seed );
+                var path = "m/" + path + "/" + index;
+                var root = node;
+                var child = root.derivePath( path );
+                return computeRawPrivkey( child );
+        }
+</script>
+<script>
+        function toHexString(byteArray) {
+                return Array.from(byteArray, function(byte) {
+                        return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+                }).join('');
+        }
+</script>
+<script>
+        var backupwords = bip39.generateMnemonic();
+        var path = 0;
+        var index = 1;
+        var privKey = getPrivkeyHex( backupwords, path, index );
+        privKey = privKey.__D.toString( 'hex' );
+        var pubKey = nobleSecp256k1.getPublicKey( privKey, true );
+        //be aware that not all valid bitcoin pubkeys are valid nostr pubkeys. Valid bitcoin pubkeys include uncompressed pubkeys (that start with 04), compressed pubkeys whose y coordinate is positive (that start with 02), and compressed pubkeys whose y coordinate is negative (that start with 03).
+        //Only the ones that start with 02 are valid for nostr, which then allows us to chop off the 02 when storing the pubkey.
+        //So if you change this code to generate random pubkeys, be sure to only use ones that have an 02 at the beginning.
+        //The pubkeyMinus2 variable is the pubkey created a moment ago but without the 02 at the beginning.
+      	var pubKeyMinus2 = pubKey.substring( 2 );
+        document.write( "your public key is " + pubKeyMinus2 + "<br><br>" );
+</script>
+</head>
+<body>
+<h1>Bitcoin coinflip</h1>
+<h2>This is a work in progress, it does not work yet</h2>
+<script>
+        function normalizeRelayURL(e){let[t,...r]=e.trim().split("?");return"http"===t.slice(0,4)&&(t="ws"+t.slice(4)),"ws"!==t.slice(0,2)&&(t="wss://"+t),t.length&&"/"===t[t.length-1]&&(t=t.slice(0,-1)),[t,...r].join("?")}
+        var relay = "wss://nostr-relay.wlvs.space";
+        relay = normalizeRelayURL( relay );
+        var socket = new WebSocket( relay );
+        var filter = {
+          "#p": [
+                  pubKeyMinus2
+          ]
+        };
+        var subscription = [ "REQ", "get-self-references", filter ];
+        subscription = JSON.stringify( subscription );
+        sessionStorage.selfsubscription = subscription;
+        setTimeout( function() {socket.send( sessionStorage.selfsubscription );}, 1000 );
+
+
+        function subscribe( pubkey ) {
+          var filter = {
+                  "authors": [
+                          pubkey
+                  ]
+          };
+          var subscription = [ "REQ", "my-sub", filter ];
+          subscription = JSON.stringify( subscription );
+          sessionStorage.subscription = subscription;
+          socket.send( sessionStorage.subscription );
+        }
+
+        socket.addEventListener( 'open', function( event ) {
+                document.body.innerHTML += "connected to nostr relay " + relay + "<br><br>";
+                document.body.innerHTML += `<input type="text" id="amount" placeholder="enter a bet amount here (min 1000, max 10000)" /> <input type="text" id="player2" placeholder="enter the pubkey of player2" style="width: 100%; max-width: 300px;" /><button onclick="startACoinflip( document.getElementById( 'player2' ).value, Number( document.getElementById( 'amount' ).value ) )">Start coinflip</button><br><br>`;
+        });
+
+        // Listen for messages
+        socket.addEventListener( 'message', function( event ) {
+                var event = JSON.parse( event.data );
+                if ( event[ 2 ].kind == 4 ) {
+                        var i; for ( i=0; i<event[ 2 ].tags.length; i++ ) {
+                                        if ( event[ 2 ].tags[ i ] && event[ 2 ].tags[ i ][ 1 ] ) {
+                                                        var recipient = event[ 2 ].tags[ i ][ 1 ];
+                                                        if ( recipient == pubKeyMinus2 ) {
+                                                                        var decrypted_message = decrypt( privKey, event[ 2 ].pubkey, event[ 2 ].content );
+                                                                        document.body.innerHTML += decrypted_message + " (sent privately by " + event[ 2 ].pubkey + ")<br><br>";
+                                                                        decideMessageTypeAndNextSteps( decrypted_message, event[ 2 ].pubkey );
+                                                        } else if ( event[ 2 ].pubkey == pubKeyMinus2 ) {
+                                                                        document.body.innerHTML += decrypt( privKey, recipient, event[ 2 ].content ) + " (sent privately by " + event[ 2 ].pubkey + ")<br><br>";
+                                                        }
+                                        }
+                        }
+                } else if ( event[ 2 ].kind == 1 ) {
+                        document.body.innerHTML += event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")<br><br>";
+                }
+        });
+</script>
+<script>
+        function decideMessageTypeAndNextSteps( decrypted_message, sender ) {
+                if ( decrypted_message.includes( '{' ) ) {
+                        var json = JSON.parse( decrypted_message );
+                        if ( json[ "msgtype" ] == "initiation" ) {
+                                acceptOrRejectCoinflipOffer( decrypted_message, sender );
+                        }
+                        if ( json[ "msgtype" ] == "acceptance" ) {
+                                acknowledgeOrIgnoreCoinflip( decrypted_message, sender );
+                        }
+                }
+        }
+        function getRandom16or17BytePreimage() {
+                var length = 16 + Math.floor( Math.random() * 2 );
+                if ( length == 16 ) {
+                        length = 32;
+                } else {
+                        length = 34;
+                }
+                var preimagestage1 = bitcoinjs.ECPair.makeRandom().__D.toString( "hex" );
+                var preimagestage2 = preimagestage1.substring( 0, length );
+                return preimagestage2;
+        }
+        function acknowledgeOrIgnoreCoinflip( decrypted_message, sender ) {
+                var json = JSON.parse( decrypted_message );
+                var claimedPlayer1Hash = json[ "player1Hash" ];
+                var claimedRevelationAddress = json[ "revelation-address" ];
+                var realjson = JSON.parse( localStorage[ "coinflip-private-info" ] );
+                var realPlayer1Hash = realjson[ "player1Hash" ];
+                if ( claimedPlayer1Hash == realPlayer1Hash ) {
+                        var player2Hash = json[ "player2Hash" ];
+                        var player2Pubkey = json[ "player2Pubkey" ];
+                        var player1Hash = realPlayer1Hash;
+                        var player1Pubkey = realjson[ "player1Pubkey" ];
+                        var player1PubkeyForRevelationAddress = realjson[ "player1PubkeyForRevelationAddress" ];
+                        var player2PubkeyForRevelationAddress = json[ "player2PubkeyForRevelationAddress" ];
+                        var blocks_to_wait = Number( realjson[ "blocks_to_wait" ] );
+                        var blocks_to_wait_for_revelation_address = 3;
+                        var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
+                        console.log( "witness script:", witnessscript );
+                        var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
+                        var witness_script_for_revelation_address = reveal_and_redeem( player2Hash, player1PubkeyForRevelationAddress, player2PubkeyForRevelationAddress, blocks_to_wait_for_revelation_address );
+                        console.log( "witness script for relelation address:", witness_script_for_revelation_address );
+                        var p2wsh_for_revelation_address = bitcoinjs.payments.p2wsh({redeem: {output: witness_script_for_revelation_address, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
+                        var revelation_address = p2wsh_for_revelation_address.address;
+                        if ( p2wsh.address == json[ "coinflip-address" ] && revelation_address == claimedRevelationAddress ) {
+                                //update the private info
+                                var coinflip_private_info = JSON.parse( localStorage[ "coinflip-private-info" ] );
+                                coinflip_private_info[ "revelation-address" ] = revelation_address;
+                                coinflip_private_info[ "player1Ack" ] = "ack";
+                                //send an ack
+                                //listen for a transaction into the coinflip address and if it arrives with an amount 2x the bet amount, wait for 3 confirmations
+                                //When the coinflip utxo has three confirmations, deposit 1x the bet amount into the revelation address
+                                //Then listen for a transaction that sweeps the money in the revelation address and get its preimage
+                                //If no sweep transaction arrives for the money in the revelation address you should sweep it after 3 blocks
+                                //Once you have the preimage, check if it has 16 or 17 bytes. Compare it with the number of bytes your transaction has.
+                                //If they are different, you won the bet! Sweep the coinflip address, otherwise let player 2 sweep it when the timelock expires
+                        }
+                }
+        }
+        function acceptOrRejectCoinflipOffer( decrypted_message, player1 ) {
+                var json = JSON.parse( decrypted_message );
+                var blocks_to_wait = Number( json[ "blocks_to_wait" ] );
+                var amount = Number( json[ "amount" ] );
+                if ( blocks_to_wait != 9 ) {
+                        return;
+                }
+                if ( amount < Number( sessionStorage[ "minimum" ] ) || amount > Number( sessionStorage[ "maximum" ] ) ) {
+                        return;
+                }
+                console.log( json );
+                var player1Hash = json[ "hash" ];
+                var player1Pubkey = json[ "pubkey" ];
+                var player1PubkeyForRevelationAddress = json[ "pubkeyForRevelationAddress" ];
+                var player2Preimage = getRandom16or17BytePreimage();
+                var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, "hex" ) ).toString( "hex" );
+                var player2Keypair = bitcoinjs.ECPair.makeRandom();
+                var player2Privkey = player2Keypair.__D.toString( "hex" );
+                var player2Pubkey = player2Keypair.publicKey.toString( "hex" );
+                var player2KeypairForRevelationAddress = bitcoinjs.ECPair.makeRandom();
+                var player2PrivkeyForRevelationAddress = player2Keypair.__D.toString( "hex" );
+                var player2PubkeyForRevelationAddress = player2Keypair.publicKey.toString( "hex" );
+                var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
+                console.log( "witness script:", witnessscript );
+                var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
+                console.log( p2wsh.address );
+                var blocks_to_wait_for_revelation_address = 3;
+                var witness_script_for_revelation_address = reveal_and_redeem( player2Hash, player1PubkeyForRevelationAddress, player2PubkeyForRevelationAddress, blocks_to_wait_for_revelation_address );
+                console.log( "witness script for relelation address:", witness_script_for_revelation_address );
+                var p2wsh_for_revelation_address = bitcoinjs.payments.p2wsh({redeem: {output: witness_script_for_revelation_address, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
+                var revelation_address = p2wsh_for_revelation_address.address;
+                var coinflipPrivateInfo = {}
+                coinflipPrivateInfo[ "player1" ] = player1;
+                coinflipPrivateInfo[ "blocks_to_wait" ] = blocks_to_wait;
+                coinflipPrivateInfo[ "amount" ] = amount;
+                coinflipPrivateInfo[ "player1Hash" ] = player1Hash;
+                coinflipPrivateInfo[ "player1Pubkey" ] = player1Pubkey;
+                coinflipPrivateInfo[ "player1PubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player2Preimage" ] = player2Preimage;
+                coinflipPrivateInfo[ "player2Hash" ] = player2Hash;
+                coinflipPrivateInfo[ "player2Privkey" ] = player2Privkey;
+                coinflipPrivateInfo[ "player2Pubkey" ] = player2Pubkey;
+                coinflipPrivateInfo[ "player2PrivkeyForRevelationAddress" ] = player2PrivkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player2PubkeyForRevelationAddress" ] = player2PubkeyForRevelationAddress;
+                coinflipPrivateInfo[ "coinflip-address" ] = p2wsh.address;
+                coinflipPrivateInfo[ "player1Ack" ] = "";
+                coinflipPrivateInfo[ "revelation-address" ] = revelation_address;
+                localStorage[ "coinflip-private-info" ] = JSON.stringify( coinflipPrivateInfo );
+                console.log( coinflipPrivateInfo );
+                var message = {}
+                message[ "msgtype" ] = "acceptance";
+                message[ "player1Hash" ] = player1Hash;
+                message[ "player2Hash" ] = player2Hash;
+                message[ "player2Pubkey" ] = player2Pubkey;
+                message[ "player2PubkeyForRevelationAddress" ] = player2PubkeyForRevelationAddress;
+                message[ "coinflip-address" ] = p2wsh.address;
+                message[ "revelation-address" ] = revelation_address;
+                message = JSON.stringify( message );
+                makePrivateNote( message, player1 );
+        }
+        function startACoinflip( player2, amount ) {
+                var player1Preimage = getRandom16or17BytePreimage();
+                var player1Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player1Preimage, "hex" ) ).toString( "hex" );
+                var player1Keypair = bitcoinjs.ECPair.makeRandom();
+                var player1Privkey = player1Keypair.__D.toString( "hex" );
+                var player1Pubkey = player1Keypair.publicKey.toString( "hex" );
+                var player1KeypairForRevelationAddress = bitcoinjs.ECPair.makeRandom();
+                var player1PrivkeyForRevelationAddress = player1KeypairForRevelationAddress.__D.toString( "hex" );
+                var player1PubkeyForRevelationAddress = player1KeypairForRevelationAddress.publicKey.toString( "hex" );
+                var blocks_to_wait = "9";
+                var message = {}
+                message[ "msgtype" ] = "initiation";
+                message[ "hash" ] = player1Hash;
+                message[ "amount" ] = Number( amount );
+                message[ "pubkey" ] = player1Pubkey;
+                message[ "pubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
+                message[ "blocks_to_wait" ] = blocks_to_wait;
+                message = JSON.stringify( message );
+                var coinflipPrivateInfo = {}
+                coinflipPrivateInfo[ "player2" ] = player2;
+                coinflipPrivateInfo[ "blocks_to_wait" ] = blocks_to_wait;
+                coinflipPrivateInfo[ "amount" ] = Number( amount );
+                coinflipPrivateInfo[ "player1Preimage" ] = player1Preimage;
+                coinflipPrivateInfo[ "player1Hash" ] = player1Hash;
+                coinflipPrivateInfo[ "player1Privkey" ] = player1Privkey;
+                coinflipPrivateInfo[ "player1Pubkey" ] = player1Pubkey;
+                coinflipPrivateInfo[ "player1PrivkeyForRevelationAddress" ] = player1PrivkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player1PubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player2Hash" ] = "";
+                coinflipPrivateInfo[ "player2Pubkey" ] = "";
+                coinflipPrivateInfo[ "coinflip-address" ] = "";
+                coinflipPrivateInfo[ "player1Ack" ] = "";
+                coinflipPrivateInfo[ "revelation-address" ] = "";
+                localStorage[ "coinflip-private-info" ] = JSON.stringify( coinflipPrivateInfo );
+                console.log( coinflipPrivateInfo );
+                makePrivateNote( message, player2 );
+        }
+</script>
+<script>
+        function prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait ) {
+            return bitcoinjs.script.fromASM(
+                `
+                    OP_TOALTSTACK
+                    OP_DUP
+                    OP_HASH160
+                    ${ player1Hash }
+                    OP_EQUAL
+                    OP_NOTIF
+                        OP_FALSE
+                        OP_NIP
+                    OP_ENDIF
+                    OP_SIZE
+                    ${ bitcoinjs.script.number.encode( 16 ).toString( 'hex' ) }
+                    OP_EQUAL
+                    OP_SWAP
+                    OP_DROP
+                    OP_FROMALTSTACK
+                    OP_DUP
+                    OP_HASH160
+                    ${ player1Hash }
+                    OP_EQUAL
+                    OP_NOTIF
+                        OP_FALSE
+                        OP_NIP
+                    OP_ENDIF
+                    OP_SIZE
+                    ${ bitcoinjs.script.number.encode( 16 ).toString( 'hex' ) }
+                    OP_EQUAL
+                    OP_SWAP
+                    OP_DROP
+                    OP_2DUP
+                    OP_NOT
+                    OP_BOOLAND
+                    OP_TOALTSTACK
+                    OP_SWAP
+                    OP_NOT
+                    OP_BOOLAND
+                    OP_FROMALTSTACK
+                    OP_BOOLOR
+                    OP_IF
+                        ${ player1Pubkey }
+                    OP_ELSE
+                   ${ bitcoinjs.script.number.encode( blocks_to_wait ).toString( 'hex' ) }
+                   OP_CHECKSEQUENCEVERIFY
+                   OP_DROP
+                   ${ player2Pubkey }
+                    OP_ENDIF
+                    OP_CHECKSIG
+                `
+                .trim()
+                .replace(/\s+/g, ' '),
+            );
+        }
+        function reveal_and_redeem( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait ) {
+            return bitcoinjs.script.fromASM(
+                `
+                    OP_SIZE
+                    ${ bitcoinjs.script.number.encode( 16 ).toString( 'hex' ) }
+                    ${ bitcoinjs.script.number.encode( 17 ).toString( 'hex' ) }
+                    OP_WITHIN
+                    OP_IF
+                        OP_DUP
+                        OP_HASH160
+                        ${ player2Hash }
+                        OP_EQUALVERIFY
+                        ${ player2Pubkey }
+                    OP_ELSE
+                       ${ bitcoinjs.script.number.encode( blocks_to_wait ).toString( 'hex' ) }
+                       OP_CHECKSEQUENCEVERIFY
+                       OP_DROP
+                       ${ player1Pubkey }
+                    OP_ENDIF
+                    OP_CHECKSIG
+                `
+                .trim()
+                .replace(/\s+/g, ' '),
+            );
+        }
+</script>
+<script>
+        function makeNote( note ) {
+                console.log( "note: '" + note + "'" );
+                var now = Math.floor( ( new Date().getTime() ) / 1000 );
+                console.log( now );
+                var newevent = [
+                        0,
+                        pubKeyMinus2,
+                        now,
+                        1,
+                        [],
+                        note
+                ];
+                var message = JSON.stringify( newevent );
+                console.log( "message: '" + message + "'" );
+                var msghash = bitcoinjs.crypto.sha256( message ).toString( 'hex' );
+                console.log( "msghash: '" + msghash + "'" );
+                nobleSecp256k1.schnorr.sign( msghash, privKey ).then( 
+                        value => { 
+                                sig = value;
+                                console.log( "the sig is:", sig );
+                                nobleSecp256k1.schnorr.verify( 
+                                        sig,
+                                        msghash,
+                                        pubKeyMinus2
+                                ).then(
+                                        value => { 
+                                                console.log( "is the signature valid for the above pubkey over the message 'test'?", value );
+                                                if ( value ) {
+                                                        var fullevent = {
+                                                                "id": msghash,
+                                                                "pubkey": pubKeyMinus2,
+                                                                "created_at": now,
+                                                                "kind": 1,
+                                                                "tags": [],
+                                                                "content": note,
+                                                                "sig": sig
+                                                        }
+                                                        var sendable = [ "EVENT", fullevent ];
+                                                        sessionStorage.sendable = JSON.stringify( sendable );
+                                                        socket.send( '["EVENT",' + JSON.stringify( JSON.parse( sessionStorage.sendable )[ 1 ] ) + ']' );
+                                                 }
+                                        }
+                               );
+                        }
+                );
+        }
+        function makePrivateNote( note, recipientpubkey ) {
+                console.log( "note: '" + note + "'" );
+                var now = Math.floor( ( new Date().getTime() ) / 1000 );
+                console.log( now );
+                var privatenote = encrypt( privKey, recipientpubkey, note );
+                var newevent = [
+                        0,
+                        pubKeyMinus2,
+                        now,
+                        4,
+                        [['p', recipientpubkey]],
+                        privatenote
+                ];
+                var message = JSON.stringify( newevent );
+                console.log( "message: '" + message + "'" );
+                var msghash = bitcoinjs.crypto.sha256( message ).toString( 'hex' );
+                console.log( "msghash: '" + msghash + "'" );
+                nobleSecp256k1.schnorr.sign( msghash, privKey ).then(
+                        value => {
+                                sig = value;
+                                console.log( "the sig is:", sig );
+                                nobleSecp256k1.schnorr.verify(
+                                        sig,
+                                        msghash,
+                                        pubKeyMinus2
+                                ).then(
+                                        value => {
+                                                console.log( "is the signature valid for the above pubkey over the message 'test'?", value );
+                                                if ( value ) {
+                                                        var fullevent = {
+                                                                "id": msghash,
+                                                                "pubkey": pubKeyMinus2,
+                                                                "created_at": now,
+                                                                "kind": 4,
+                                                                "tags": [['p', recipientpubkey]],
+                                                                "content": privatenote,
+                                                                "sig": sig
+                                                        }
+                                                        var sendable = [ "EVENT", fullevent ];
+                                                        sessionStorage.sendable = JSON.stringify( sendable );
+                                                        socket.send( '["EVENT",' + JSON.stringify( JSON.parse( sessionStorage.sendable )[ 1 ] ) + ']' );
+                                                 }
+                                        }
+                               );
+                        }
+                );
+        }
+        function encrypt( privkey, pubkey, text ) {
+          var key = nobleSecp256k1.getSharedSecret( privkey, '02' + pubkey, true ).substring( 2 );
+
+          var iv = window.crypto.getRandomValues( new Uint8Array(16) );
+          var cipher = browserifyCipher.createCipheriv(
+            'aes-256-cbc',
+            buffer.Buffer.from( key, 'hex' ),
+            iv
+          );
+          var encryptedMessage = cipher.update( text, "utf8", "base64" );
+          emsg = encryptedMessage + cipher.final( "base64" );
+
+          return emsg + "?iv=" + buffer.Buffer.from( iv.buffer ).toString( "base64");
+        }
+
+        function decrypt( privkey, pubkey, ciphertext ) {
+          var [ emsg, iv ] = ciphertext.split( "?iv=" );
+          var key = nobleSecp256k1.getSharedSecret( privkey, '02' + pubkey, true ).substring( 2 );
+
+          var decipher = browserifyCipher.createDecipheriv(
+            'aes-256-cbc',
+            buffer.Buffer.from( key, "hex" ),
+            buffer.Buffer.from( iv, "base64" )
+          );
+          var decryptedMessage = decipher.update( emsg, "base64" );
+          dmsg = decryptedMessage + decipher.final( "utf8" );
+
+          return dmsg;
+        }
+        sessionStorage[ "maximum" ] = 10000;
+        sessionStorage[ "minimum" ] = 1000;
+</script>
+</body>
+</html>
