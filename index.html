@@ -159,7 +159,7 @@
                         console.log( "Send", ( Number( realjson[ "amount" ] ) * 2 ), "sats to this address:" );
                         console.log( realjson[ "coinflip-address" ] );
                         //TODO: since I am not sure the other party will actually send money into the revelation address, but I already sent money into the coinflip address, I should not run the preimage revealer *before* the coinflip sweeper -- as I am currently doing -- but I should run them in parallel so that I automatically sweep my money from the coinflip even if my counterparty never deposits money into the revelation address
-                        //run a sweep function that takes money out of that revelation after however many confs you agreed on for the revelation address
+                        //run a sweep function that takes money out of the revelation address after however many confs you agreed on for the revelation address
                         var revelation_txid = await addyLooper( realjson[ "revelation-address" ] );
                         sessionStorage[ revelation_txid ] = "-1";
                         var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
@@ -178,10 +178,9 @@
                         var player2Preimage = realjson[ "player2Preimage" ];
                         var hash = realjson[ "player2Hash" ];
                         var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
-                        //TODO: replace the following function with the one that reveals the preimage
                         revealPreimage( player2Preimage, player1PubkeyForRevelationAddress, player2PrivkeyForRevelationAddress, blocks_to_wait_for_revelation_address, revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_revealing_preimage, useraddress_for_revelation_address );
                         console.log( "Almost done! You withdrew from the revelation address!" );
-                        //run a sweep function that takes money out of that address after however many confs you agreed on for the coinflip address
+                        //run a sweep function that takes money out of the coinflup address after however many confs you agreed on for the coinflip address
                         var coinflip_txid = await addyLooper( realjson[ "coinflip-address" ] );
                         sessionStorage[ coinflip_txid ] = "-1";
                         console.log( [0] );
@@ -257,7 +256,7 @@
                                         var confs = await waitForTheRightNumberOfConfs( coinflip_txid, 1 );
                                         console.log( [7] );
                                         console.log( "Send", ( Number( coinflip_private_info[ "amount" ] ) ), "sats to this address:" );
-                                        //TODO: add an extra sweep function that waits 3 blocks and then sweeps money out of the revelation address if necessary
+                                        //TODO: add an extra sweep function that sweeps money out of the revelation address if necessary after waiting however many confs were agreed upon for the revelation address
                                         console.log( coinflip_private_info[ "revelation-address" ] );
                                         var player2Preimage = await preimageLooper( coinflip_private_info[ "revelation-address" ], coinflip_private_info[ "player2Hash" ] );
                                         var player2PreimageLength = player2Preimage.length / 2;
@@ -576,7 +575,7 @@
                     OP_FROMALTSTACK
                     OP_DUP
                     OP_HASH160
-                    ${ player1Hash }
+                    ${ player2Hash }
                     OP_EQUAL
                     OP_NOTIF
                         OP_FALSE
@@ -587,22 +586,21 @@
                     OP_EQUAL
                     OP_SWAP
                     OP_DROP
-                    OP_2DUP
-                    OP_NOT
-                    OP_BOOLAND
-                    OP_TOALTSTACK
+                    OP_DUP
+                    OP_SIZE
+                    OP_EQUALVERIFY
                     OP_SWAP
-                    OP_NOT
-                    OP_BOOLAND
-                    OP_FROMALTSTACK
-                    OP_BOOLOR
+                    OP_DUP
+                    OP_SIZE
+                    OP_EQUALVERIFY
+                    OP_NUMNOTEQUAL
                     OP_IF
                         ${ player1Pubkey }
                     OP_ELSE
-                   ${ bitcoinjs.script.number.encode( blocks_to_wait ).toString( 'hex' ) }
-                   OP_CHECKSEQUENCEVERIFY
-                   OP_DROP
-                   ${ player2Pubkey }
+                        ${ bitcoinjs.script.number.encode( blocks_to_wait ).toString( 'hex' ) }
+                        OP_CHECKSEQUENCEVERIFY
+                        OP_DROP
+                        ${ player2Pubkey }
                     OP_ENDIF
                     OP_CHECKSIG
                 `
@@ -615,7 +613,7 @@
                 `
                     OP_SIZE
                     ${ bitcoinjs.script.number.encode( 15 ).toString( 'hex' ) }
-                    ${ bitcoinjs.script.number.encode( 16 ).toString( 'hex' ) }
+                    ${ bitcoinjs.script.number.encode( 17 ).toString( 'hex' ) }
                     OP_WITHIN
                     OP_IF
                         OP_HASH160
@@ -664,7 +662,7 @@
                 witnessUtxo: {
                           script: buffer.Buffer.from('0020' +
                                     bitcoinjs.crypto.sha256( buffer.Buffer.from( witnessscript, 'hex' ) ).toString( 'hex' ),
-                                    'hex'),
+                                    'hex' ),
                           value: original_quantity_of_sats
                 },
                 witnessScript: buffer.Buffer.from( witnessscript, 'hex' )
@@ -1049,7 +1047,7 @@
                                         pubKeyMinus2
                                 ).then(
                                         value => { 
-                                                console.log( "is the signature valid for the above pubkey over the message 'test'?", value );
+                                                console.log( "this should say true if the signature is valid for the above pubkey over the message", value );
                                                 if ( value ) {
                                                         var fullevent = {
                                                                 "id": msghash,
