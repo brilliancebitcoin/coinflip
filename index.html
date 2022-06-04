@@ -38,27 +38,131 @@
         privKey = privKey.__D.toString( 'hex' );
         var pubKey = nobleSecp256k1.getPublicKey( privKey, true );
         var pubKeyMinus2 = pubKey.substring( 2 );
-        document.write( "your public key is " + pubKeyMinus2 + "<br><br>" );
+        sessionStorage[ "pubkeyMinus2" ] = pubKeyMinus2;
 </script>
+<style>
+        * {
+                box-sizing: border-box;
+                margin: 0px;
+                padding: 0px;
+        }
+</style>
 </head>
 <body>
-<h1>Bitcoin coinflip</h1>
-<h2>This is a work in progress, it does not work yet</h2>
+        <h1>This is a work in progress, it doesn't work yet</h1>
+        <h1>Orderbook</h1>
+        <div id="orderbook" style="font-family: monospace;">
+                <div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">Player 1</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">Amount</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">Expiry</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 74px; text-align: center;">Accept?</div><br>
+        </div>
+        <h1>Create a coinflip</h1>
+        <p>This coinflip site uses a remote coinflipping technique invented in 1981 by Michael Blum. You pick Heads or Tails and commit to it via a cryptographic hash which you will soon publish on bitcoin's blockchain. Your opponent guesses if you picked Heads or Tails, and you cannot change your choice after he or she guesses because the blockchain is irreversible. If your opponent guesses correctly, he or she wins the bet amount, otherwise you win. The rules of the game are enforced by a bitcoin smart contract. There are no third parties involved, only you and your opponent.</p>
+        <p>Try clicking Heads or Tails below. You can see how your hash will appear on the blockchain, it is displayed as a 40 character string under the coin. Be aware that every time you play the game the hashes will be different because they are not literally a hash of the word Heads or the word Tails. The strings are hashes of random numbers that are either 16 bytes long (Heads) or 17 bytes long (Tails).</p>
+        <p>When you are ready to commit to your coinflip, click Create. This website will then create an offer and wait for someone to accept it. You'll also get a link you can share if you want to invite someone to accept your coinflip. You won't need to pay money to commit your coinflip to the blockchain til someone accepts your offer. You can also abort at any time except if your opponent wins (which is sort of an auto-abort situation anyway, one where you also can't get your money back).</p>
+        <p>Amount of sats to bet</p>
+        <p><input type="text" id="amount" placeholder="(min 1000, max 10000)" style="width: 100%; max-width: 350px;" /></p>
+        <p><button id="heads-btn">Heads</button></p>
+        <p><button id="tails-btn">Tails</button></p>
+        <p><button id="random-btn">Random</button></p>
+        <p><button id="create-btn">Create</button></p>
+        <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
+        <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
+        <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #ccc" />
+        <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
+<script>
+        window.onload = function() {
+                if ( !sessionStorage[ "sixteenBytePreimage" ] || sessionStorage[ "sixteenBytePreimage" ] == "" ) {
+                        var sixteenBytePreimage = get16BytePreimage();
+                        sessionStorage[ "sixteenBytePreimage" ] = sixteenBytePreimage;
+                }
+                document.getElementById( "hash" ).value = bitcoinjs.crypto.hash160( buffer.Buffer.from( sessionStorage[ "sixteenBytePreimage" ], "hex" ) ).toString( "hex" );
+        }
+</script>
+<script>
+        document.getElementById( "heads-btn" ).addEventListener( "click", function() {
+                document.getElementById( "obverse" ).style.display = "block";
+                document.getElementById( "reverse" ).style.display = "none";
+                if ( !sessionStorage[ "sixteenBytePreimage" ] || sessionStorage[ "sixteenBytePreimage" ] == "" ) {
+                        var sixteenBytePreimage = get16BytePreimage();
+                        sessionStorage[ "sixteenBytePreimage" ] = sixteenBytePreimage;
+                }
+                document.getElementById( "hash" ).value = bitcoinjs.crypto.hash160( buffer.Buffer.from( sessionStorage[ "sixteenBytePreimage" ], "hex" ) ).toString( "hex" );
+        });
+        document.getElementById( "tails-btn" ).addEventListener( "click", function() {
+                document.getElementById( "obverse" ).style.display = "none";
+                document.getElementById( "reverse" ).style.display = "block";
+                if ( !sessionStorage[ "seventeenBytePreimage" ] || sessionStorage[ "seventeenBytePreimage" ] == "" ) {
+                        var seventeenBytePreimage = get17BytePreimage();
+                        sessionStorage[ "seventeenBytePreimage" ] = seventeenBytePreimage;
+                }
+                document.getElementById( "hash" ).value = bitcoinjs.crypto.hash160( buffer.Buffer.from( sessionStorage[ "seventeenBytePreimage" ], "hex" ) ).toString( "hex" );
+        });
+        document.getElementById( "random-btn" ).addEventListener( "click", function() {
+                var rand = Math.floor( Math.random() * 2 );
+                console.log( rand );
+                if ( rand == 0 ) {
+                        document.getElementById( "heads-btn" ).click();
+                } else {
+                        document.getElementById( "tails-btn" ).click();
+                }
+        });
+        document.getElementById( "abort" ).addEventListener( "click", function() {
+                confirm( "If you abort at this stage you won't lose any money and everything will reset. Please click ok if that is what you want or click cancel to continue playing the game." );
+        });
+        document.getElementById( "create-btn" ).addEventListener( "click", function() {
+                var amount = document.getElementById( "amount" ).value;
+                if ( Number( amount ) < 1000 ) {
+                        alert( "Minimum amount is 1000" );
+                } else {
+                        var heads_or_tails = ( document.getElementById( "obverse" ).style.display == "block" ) ? "heads":"tails";
+                        if ( heads_or_tails == "heads" ) {
+                                var preimage = sessionStorage[ "sixteenBytePreimage" ];
+                        } else {
+                                var preimage = sessionStorage[ "seventeenBytePreimage" ];
+                        }
+                        createOffer( amount, preimage );
+                }
+        });
+        function isJsonString(str) {
+            try {
+                JSON.parse(str);
+            } catch (e) {
+                return false;
+            }
+            return true;
+        }
+        function processOffer( offer, id ) {
+                if ( isJsonString( offer ) && JSON.parse( offer )[ "msgtype" ] && JSON.parse( offer )[ "hash" ] && JSON.parse( offer )[ "amount" ] && JSON.parse( offer )[ "pubkey" ] && JSON.parse( offer )[ "pubkeyForRevelationAddress" ] && JSON.parse( offer )[ "blocks_to_wait" ] && JSON.parse( offer )[ "blocks_to_wait_for_revelation_address" ] &&  JSON.parse( offer )[ "offer_expires" ] ) {
+                        var expiry = JSON.parse( offer )[ "offer_expires" ];
+                        var player1 = JSON.parse( offer )[ "pubkey" ];
+                        var amount = JSON.parse( offer )[ "amount" ];
+                        document.getElementById( "orderbook" ).innerHTML += `<div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">` + player1.substring( 0, 12 ) +  `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">` + amount.toString() + " sats" + `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">` + new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString() + `</div><a href="/offer/?id=` + id + `"><div style="border: 1px solid green; border-radius: 5px; width: 60px; margin-left: 7px; display: inline-block; text-align: center; background-color: lightgreen; color: white; font-weight: bold; cursor: pointer;">Accept</div></a><br>`;
+                }
+        }
+</script>
 <script>
         function normalizeRelayURL(e){let[t,...r]=e.trim().split("?");return"http"===t.slice(0,4)&&(t="ws"+t.slice(4)),"ws"!==t.slice(0,2)&&(t="wss://"+t),t.length&&"/"===t[t.length-1]&&(t=t.slice(0,-1)),[t,...r].join("?")}
         var relay = "wss://nostr-relay.wlvs.space";
         relay = normalizeRelayURL( relay );
         var socket = new WebSocket( relay );
         var filter = {
-          "#p": [
-                  pubKeyMinus2
-          ]
+                "#p": [
+                        pubKeyMinus2
+                ]
         };
         var subscription = [ "REQ", "get-self-references", filter ];
         subscription = JSON.stringify( subscription );
-        sessionStorage.selfsubscription = subscription;
-        setTimeout( function() {socket.send( sessionStorage.selfsubscription );}, 1000 );
+        sessionStorage[ "selfsubscription" ] = subscription;
+        setTimeout( function() {socket.send( sessionStorage[ "selfsubscription" ] );}, 1000 );
 
+        var filter = {
+                "kinds": [
+                        40
+                ]
+        };
+        var subscription2 = [ "REQ", "get-kind-forty", filter ];
+        subscription2 = JSON.stringify( subscription2 );
+        sessionStorage[ "kindfortysub" ] = subscription2;
+        setTimeout( function() {socket.send( sessionStorage[ "kindfortysub" ] );}, 1000 );
 
         function subscribe( pubkey ) {
           var filter = {
@@ -73,8 +177,7 @@
         }
 
         socket.addEventListener( 'open', function( event ) {
-                document.body.innerHTML += "connected to nostr relay " + relay + "<br><br>";
-                document.body.innerHTML += `<input type="text" id="amount" placeholder="bet amount (min 1000, max 10000)" style="width: 100%; max-width: 300px;" /> <input type="text" id="player2" placeholder="enter the pubkey of player2" style="width: 100%; max-width: 300px;" /><button onclick="console.log( document.getElementById( 'player2' ).value );startACoinflip( document.getElementById( 'player2' ).value, Number( document.getElementById( 'amount' ).value ) )">Start coinflip</button><br><br>`;
+                console.log( "connected to nostr relay " + relay );
         });
 
         // Listen for messages
@@ -86,15 +189,17 @@
                                                         var recipient = event[ 2 ].tags[ i ][ 1 ];
                                                         if ( recipient == pubKeyMinus2 ) {
                                                                         var decrypted_message = decrypt( privKey, event[ 2 ].pubkey, event[ 2 ].content );
-                                                                        document.body.innerHTML += decrypted_message + " (sent privately by " + event[ 2 ].pubkey + ")<br><br>";
+                                                                        console.log( decrypted_message + " (sent privately by " + event[ 2 ].pubkey + ")" );
                                                                         decideMessageTypeAndNextSteps( decrypted_message, event[ 2 ].pubkey );
                                                         } else if ( event[ 2 ].pubkey == pubKeyMinus2 ) {
-                                                                        document.body.innerHTML += decrypt( privKey, recipient, event[ 2 ].content ) + " (sent privately by " + event[ 2 ].pubkey + ")<br><br>";
+                                                                        console.log( decrypt( privKey, recipient, event[ 2 ].content ) + " (sent privately by " + event[ 2 ].pubkey + ")" );
                                                         }
                                         }
                         }
                 } else if ( event[ 2 ].kind == 1 ) {
-                        document.body.innerHTML += event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")<br><br>";
+                        console.log( event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")" );
+                } else if ( event[ 2 ].kind == 40 ) {
+                        processOffer( event[ 2 ].content, event[ 2 ].id );
                 }
         });
 </script>
@@ -139,37 +244,43 @@
                         }
                 }
         }
-        function getRandom15or16BytePreimage() {
-                var length = 15 + Math.floor( Math.random() * 2 );
-                if ( length == 15 ) {
-                        length = 30;
-                } else {
+        function get16BytePreimage() {
+                var length = 32;
+                var preimagestage1 = bitcoinjs.ECPair.makeRandom().__D.toString( "hex" );
+                var preimagestage2 = preimagestage1.substring( 0, length );
+                return preimagestage2;
+        }
+        function get17BytePreimage() {
+                var length = 34;
+                var preimagestage1 = bitcoinjs.ECPair.makeRandom().__D.toString( "hex" );
+                var preimagestage2 = preimagestage1.substring( 0, length );
+                return preimagestage2;
+        }
+        function getRandom16or17BytePreimage() {
+                var length = 16 + Math.floor( Math.random() * 2 );
+                if ( length == 16 ) {
                         length = 32;
+                } else {
+                        length = 34;
                 }
                 var preimagestage1 = bitcoinjs.ECPair.makeRandom().__D.toString( "hex" );
                 var preimagestage2 = preimagestage1.substring( 0, length );
                 return preimagestage2;
         }
-        async function decideWhetherToSendMoneyAsPlayer2( decrypted_message, player1 ) {
+        async function sweepMoneyFromRevelationAddressAsPlayer2( realjson ) {
                 //player 2 runs this
-                var json = JSON.parse( decrypted_message );
-                var realjson = JSON.parse( localStorage[ "coinflip-private-info" ] );
-                console.log( "here are the contents of coinflip-private-info at the point when I am trying to write a script to sweep the revelation address:", realjson );
-                if ( json[ "player2Hash" ] == realjson[ "player2Hash" ] ) {
-                        console.log( "Send", ( Number( realjson[ "amount" ] ) * 2 ), "sats to this address:" );
-                        console.log( realjson[ "coinflip-address" ] );
-                        //TODO: since I am not sure the other party will actually send money into the revelation address, but I already sent money into the coinflip address, I should not run the preimage revealer *before* the coinflip sweeper -- as I am currently doing -- but I should run them in parallel so that I automatically sweep my money from the coinflip even if my counterparty never deposits money into the revelation address
-                        //run a sweep function that takes money out of the revelation address after however many confs you agreed on for the revelation address
-                        var revelation_txid = await addyLooper( realjson[ "revelation-address" ] );
-                        sessionStorage[ revelation_txid ] = "-1";
-                        var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
-                        console.log( [0] );
-                        confLooper( revelation_txid, blocks_to_wait_for_revelation_address );
-                        console.log( [1] );
-                        await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address );
-                        console.log( [2] );
+                var revelation_txid = await addyLooper( realjson[ "revelation-address" ], "player2", "sweepFromRevelationAddress" );
+                sessionStorage[ revelation_txid ] = "0";
+                var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
+                var blocks_to_wait_for_revelation_address_as_player_2 = 1;
+                //abort if the amount in the revelation address is lower than the agreed upon amount
+                var amount_in_revelation_address = await getAmountOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
+                if ( Number( amount_in_revelation_address ) < Number( realjson[ "amount" ] ) ) {
+                        alert( "Aborted because the other player sent the wrong amount of money" );
+                } else {
+                        confLooper( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2 );
+                        await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2, "player2", realjson[ "revelation-address" ] );
                         var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
-                        //TODO: make sure the amount in the address matches the agreed upon amount before continuing
                         var original_quantity_of_sats_in_revelation_address = ( Number( realjson[ "amount" ] ) );
                         var new_quantity_of_sats_for_revealing_preimage = original_quantity_of_sats_in_revelation_address - 250;
                         var player2PrivkeyForRevelationAddress = realjson[ "player2PrivkeyForRevelationAddress" ];
@@ -179,15 +290,37 @@
                         var hash = realjson[ "player2Hash" ];
                         var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
                         revealPreimage( player2Preimage, player1PubkeyForRevelationAddress, player2PrivkeyForRevelationAddress, blocks_to_wait_for_revelation_address, revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_revealing_preimage, useraddress_for_revelation_address );
-                        console.log( "Almost done! You withdrew from the revelation address!" );
-                        //run a sweep function that takes money out of the coinflup address after however many confs you agreed on for the coinflip address
-                        var coinflip_txid = await addyLooper( realjson[ "coinflip-address" ] );
-                        sessionStorage[ coinflip_txid ] = "-1";
-                        console.log( [0] );
-                        confLooper( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ) );
-                        console.log( [1] );
-                        await waitForTheRightNumberOfConfs( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ) );
-                        console.log( [2] );
+                        console.log( "Almost done! You withdrew from the revelation address." );
+                }
+        }
+        async function sweepMoneyFromRevelationAddressAsPlayer1( realjson ) {
+                //player 1 runs this
+                var revelation_txid = await addyLooper( realjson[ "revelation-address" ], "player1", "sweepFromRevelationAddress" );
+                sessionStorage[ revelation_txid ] = "0";
+                var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
+                confLooper( revelation_txid, blocks_to_wait_for_revelation_address );
+                await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address, "player2", realjson[ "revelation-address" ] );
+                var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
+                var original_quantity_of_sats_in_revelation_address = ( Number( realjson[ "amount" ] ) );
+                var new_quantity_of_sats_for_withdrawing_after_timelock = original_quantity_of_sats_in_revelation_address - 250;
+                var player1PrivkeyForRevelationAddress = realjson[ "player1PrivkeyForRevelationAddress" ];
+                var player1PubkeyForRevelationAddress = realjson[ "player1PubkeyForRevelationAddress" ];
+                var player2PubkeyForRevelationAddress = realjson[ "player2PubkeyForRevelationAddress" ];
+                var hash = realjson[ "player2Hash" ];
+                var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
+                withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
+                console.log( "Aborted because player 2 took too long to reveal their preimage. If you waited any longer your money would be at risk." );
+        }
+        async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
+                //player 2 runs this
+                var coinflip_txid = await addyLooper( realjson[ "coinflip-address" ], "player2", "sweepFromCoinflipAddress" );
+                sessionStorage[ coinflip_txid ] = "0";
+                confLooper( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ) );
+                var didILose = await waitForTheRightNumberOfConfs( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ), "player2", realjson[ "coinflip-address" ] );
+                //Stop running "waitfortherightnumberofconfs" if I see that the other party withdrew the money, i.e. if the address has a spent txo, and alert the player that they lost.
+                if ( didILose == "You lost :(" ) {
+                        alert( "Oh no! You lost :(" );
+                } else {
                         var txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "coinflip-address" ], coinflip_txid );
                         var original_quantity_of_sats = ( Number( realjson[ "amount" ] ) * 2 );
                         var new_quantity_of_sats = original_quantity_of_sats - 250;
@@ -196,12 +329,26 @@
                         var player1Pubkey = realjson[ "player1Pubkey" ];
                         var player2Hash = realjson[ "player2Hash" ];
                         var player1Hash = realjson[ "player1Hash" ];
-                        var randomPreimage1 = getRandom15or16BytePreimage();
-                        var randomPreimage2 = getRandom15or16BytePreimage();
+                        var randomPreimage1 = getRandom16or17BytePreimage();
+                        var randomPreimage2 = getRandom16or17BytePreimage();
                         var blocks_to_wait = realjson[ "blocks_to_wait" ];
                         var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
                         player2WonCoinflip( coinflip_txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash );
                         console.log( "Done! You won the bet!" );
+                }
+        }
+        async function decideWhetherToSendMoneyAsPlayer2( decrypted_message, player1 ) {
+                //player 2 runs this
+                var json = JSON.parse( decrypted_message );
+                var realjson = JSON.parse( localStorage[ "coinflip-private-info" ] );
+                console.log( "here are the contents of coinflip-private-info at the point when I am trying to write a script to sweep the revelation address:", realjson );
+                if ( json[ "player2Hash" ] == realjson[ "player2Hash" ] ) {
+                        console.log( "Send", ( Number( realjson[ "amount" ] ) * 2 ), "sats to this address:" );
+                        console.log( realjson[ "coinflip-address" ] );
+                        //run a sweep function that takes money out of the revelation address after however many confs you agreed on for the revelation address
+                        sweepMoneyFromRevelationAddressAsPlayer2( realjson );
+                        //run a sweep function that takes money out of the coinflup address after however many confs you agreed on for the coinflip address
+                        sweepMoneyFromCoinflipAddressAsPlayer2( realjson );
                 }
         }
         async function acknowledgeOrIgnoreCoinflip( decrypted_message, player2 ) {
@@ -220,6 +367,8 @@
                         var player2PubkeyForRevelationAddress = json[ "player2PubkeyForRevelationAddress" ];
                         var blocks_to_wait = Number( realjson[ "blocks_to_wait" ] );
                         var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
+                        console.log( "ok time to pay attention" );
+                        console.log( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
                         var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
                         console.log( "witness script:", witnessscript );
                         var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -245,18 +394,18 @@
                                 message = JSON.stringify( message );
                                 makePrivateNote( message, player2 );
                                 //listen for a transaction into the coinflip address and if it arrives with an amount 2x the bet amount, await 1 confirmation
-                                var coinflip_txid = await addyLooper( p2wsh.address );
-                                sessionStorage[ coinflip_txid ] = "-1";
+                                var coinflip_txid = await addyLooper( p2wsh.address, "player1", "depositIntoRevelationAddress" );
+                                //Player 1 aborts (by not depositing money into the revelation address) if the coinflip address does not have money in it within 3 blocks after the game starts. The logic for this is in addyLooper.
+                                sessionStorage[ coinflip_txid ] = "0";
                                 var actual_amount_in_coinflip_address = await getAmountOfTxThatSentMeMoney( p2wsh.address, coinflip_txid );
-                                console.log( [4] );
                                 if ( Number( actual_amount_in_coinflip_address ) >= ( Number( realjson[ "amount" ] ) * 2 ) ) {
-                                        console.log( [5] );
                                         confLooper( coinflip_txid, 1 );
-                                        console.log( [6] );
-                                        var confs = await waitForTheRightNumberOfConfs( coinflip_txid, 1 );
-                                        console.log( [7] );
+                                        var confs = await waitForTheRightNumberOfConfs( coinflip_txid, 1, "player1", coinflip_private_info[ "coinflip-address" ] );
                                         console.log( "Send", ( Number( coinflip_private_info[ "amount" ] ) ), "sats to this address:" );
-                                        //TODO: add an extra sweep function that sweeps money out of the revelation address if necessary after waiting however many confs were agreed upon for the revelation address
+                                        //The following sweep function sweeps money out of the revelation address if necessary after awaiting however many confs were agreed upon for the revelation address.
+                                        //Remember that the revelation address should expire 4 blocks before the coinflip address, but since I assume it is possible that the player 2 has two blocks that player 1 doesn't know about, I also must assume it is possible for the revelation address to expire only 2 blocks before the coinflip address. Still, that shouldn't change anything if it happens, player 1 should still just abort and withdraw their money at that point, which should be plenty of time before player 2 can do anything nefarious.
+                                        //TODO_TEST: Test what happens if player 2 decides to make a race condition here by broadcasting their preimage-based withdrawal at the same time as player 1's timelock-based withdrawal. What ought to happen is that player 1 should still get player 2's preimage and use it to try to withdraw from the coinflip address if they won. Status: I tried to create a race condition after player 1 broadcasted a transaction withdrawing their money but I got an error that said my transaction needs at least one input. I kind of expected it to say you can't spend an input that's already spent, and I also wondered if it might say I need to bump the fee higher to do rbf (which I don't think was even enabled), but the error I got is a little different from both of those (though it is kind of similar to the first one). I decoded the transaction on blockcypher and it seemed to have an input to me. So I'm not sure what to think of that but now I want to test what happens if player 2 broadcasts first.
+                                        sweepMoneyFromRevelationAddressAsPlayer1( coinflip_private_info );
                                         console.log( coinflip_private_info[ "revelation-address" ] );
                                         var player2Preimage = await preimageLooper( coinflip_private_info[ "revelation-address" ], coinflip_private_info[ "player2Hash" ] );
                                         var player2PreimageLength = player2Preimage.length / 2;
@@ -283,9 +432,18 @@
         function acceptOrRejectCoinflipOffer( decrypted_message, player1 ) {
                 //player 2 runs this
                 var json = JSON.parse( decrypted_message );
+                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
                 var blocks_to_wait = Number( json[ "blocks_to_wait" ] );
+                var blocks_to_wait_for_revelation_address = Number( json[ "blocks_to_wait_for_revelation_address" ] );
                 var amount = Number( json[ "amount" ] );
-                if ( blocks_to_wait != 9 ) {
+                //Note: The minimum wait time for the coinflip address that player 1 will accept is 8 blocks, see the todo under the function "acceptOrRejectCoinflipOffer" for reasons why. Player 2 sets a maximum of 1 more than that so that he doesn't have to wait forever.
+                var maximum_blocks_to_wait = 9;
+                if ( blocks_to_wait > maximum_blocks_to_wait ) {
+                        return;
+                }
+                //Note: 4 blocks is the minimum expiry player 2 should accept for the revelation address. As long as it is 4 or more, player 2 doesn't need to worry if player 1 deposits money into the revelation address even with only 2 or 1 blocks left before the coinflip address expires. The worst case scenario that I think is worth considering is that player 1 knows about 2 blocks that player 2 doesn't know about. That is in a category that I consider unlikely-yes-but-still-too-possible if blocks are clearing quickly that day. If therefore player 1 only had to wait 3 blocks before withdrawing their money from the revelation address, and if player 1 knew about 2 blocks that player 2 didn't know about, player 1 could profit if player 2 revealed their preimage because player 1 could try to sweep money out of the revelation address *and* get player 2's preimage. (This would be possible under a 3 block waiting period because, if player 1 knew about 2 blocks that player 2 didn't know about, and player 2 disclosed their preimage, then player 2's transaction sweeping funds from the revelation address and player 1's transaction sweeping money from the revelation address would both be valid as of the next block, creating a race condition -- except regardless of the outcome of the race condition, player 1 would know player 2's preimage.) That could cause player 2 to reveal their preimage without gaining anything, which isn't supposed to happen. So player 2 needs to make sure player 1 waits at least 4 blocks before withdrawing their money from the revelation address, because I consider it so-unlikely-as-to-be-basically-impossible that player 1 knows about 3 blocks that player 2 doesn't know about. Therefore as long as player 1 has to wait 4 blocks, if player 1 deposits money into the revelation address when there are only 2 blocks before the coinflip address expires, player 2 should be happy to reveal his preimage, because even if the other party knows about 2 blocks that he doesn't know about yet, that only means the coinflip address actually expired without player 2 knowing about it for a few seconds, and in that case, he can be sure he'll learn about it before player 1 can withdraw their money from the revelation address, which means that player 2 can try to withdraw from the coinflip address *right now,* and they can *definitely* withdraw from the revelation address (player 1 still has to wait at least 2 blocks, even if he knows about 2 that player 2 doesn't know about), so player 2 can definitely sweep money out of the revelation address *and* (maybe) out of the revelation address (that part would just be a race, if player 1 won).
+                var acceptable_blocks_to_wait_for_revelation_address = 4;
+                if ( blocks_to_wait_for_revelation_address < acceptable_blocks_to_wait_for_revelation_address ) {
                         return;
                 }
                 if ( amount < Number( sessionStorage[ "minimum" ] ) || amount > Number( sessionStorage[ "maximum" ] ) ) {
@@ -295,7 +453,7 @@
                 var player1Hash = json[ "hash" ];
                 var player1Pubkey = json[ "pubkey" ];
                 var player1PubkeyForRevelationAddress = json[ "pubkeyForRevelationAddress" ];
-                var player2Preimage = getRandom15or16BytePreimage();
+                var player2Preimage = getRandom16or17BytePreimage();
                 console.log( "this is player two's preimage:", player2Preimage );
                 console.log( "this is its length:", player2Preimage.length / 2 );
                 var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, "hex" ) ).toString( "hex" );
@@ -309,8 +467,6 @@
                 console.log( "witness script:", witnessscript );
                 var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
                 console.log( p2wsh.address );
-                var blocks_to_wait_for_revelation_address = "1";
-                //TODO: ensure the blocks to wait for revelation address are negotiable and each player has a setting to modify what options they'll accept
                 var witness_script_for_revelation_address = reveal_and_redeem( player2Hash, player1PubkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( blocks_to_wait_for_revelation_address ) );
                 console.log( "witness script for relelation address:", witness_script_for_revelation_address );
                 var p2wsh_for_revelation_address = bitcoinjs.payments.p2wsh({redeem: {output: witness_script_for_revelation_address, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -347,7 +503,7 @@
         }
         function startACoinflip( player2, amount ) {
                 //player 1 runs this
-                var player1Preimage = getRandom15or16BytePreimage();
+                var player1Preimage = getRandom16or17BytePreimage();
                 console.log( "this is player one's preimage:", player1Preimage );
                 console.log( "this is its length:", player1Preimage.length / 2 );
                 var player1Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player1Preimage, "hex" ) ).toString( "hex" );
@@ -357,9 +513,10 @@
                 var player1KeypairForRevelationAddress = bitcoinjs.ECPair.makeRandom();
                 var player1PrivkeyForRevelationAddress = player1KeypairForRevelationAddress.__D.toString( "hex" );
                 var player1PubkeyForRevelationAddress = player1KeypairForRevelationAddress.publicKey.toString( "hex" );
-                var blocks_to_wait = "9";
-                var blocks_to_wait_for_revelation_address = "1";
-                //TODO: ensure the blocks to wait for revelation address are negotiable and each player has a setting to modify what options they'll accept
+                //Note: The minimum wait time for the revelation address that player 2 will accept is 4 blocks, see the todo under the function "acceptOrRejectCoinflipOffer" for reasons why. A consequence of this is that the minimum wait time for the coinflip address should be 8 blocks. That is for several reasons, one of which is, Player 1 doesn't know if player 2 has 2 blocks that player 1 doesn't know about. Therefore Player 1 should not deposit money into the revelation address if the coinflip address is within 6 blocks of expiring, because otherwise player 2 could delay revealing their preimage until the revelation address's 4 blocks expire, which would be after (or at the same time as) they can withdraw money from the coinflip address. That would allow them to get Alice's money even if Alice won the coinflip, without giving Alice any recourse. Which means the minimum number of confs that player 1 should accept for the coinflip address is 8 if the wait time for the revelation address is 4 blocks. (Generalizing, player 1 should have a rule that the minimum wait time for the coinflip address be 4 more than the wait time for the revelation address, that way there is a next-to-impossible chance that player 2 can withdraw their money before player 1 can determine if they won the game. Also notable is that if the wait time for the coinflip address was only 3 more than the wait time for the revelation address, and if player 2 had 2 blocks that player 1 did not know about, player 2's withdrawal transaction would be valid at the same time as player 1's withdrawal transaction, creating a race condition. So player 1's minimum acceptable wait time for the coinflip address should be 4 more than the wait time of the revelation address.)
+                var blocks_to_wait = "8";
+                var blocks_to_wait_for_revelation_address = "4";
+                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
                 var message = {}
                 message[ "msgtype" ] = "initiation";
                 message[ "hash" ] = player1Hash;
@@ -367,6 +524,7 @@
                 message[ "pubkey" ] = player1Pubkey;
                 message[ "pubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
                 message[ "blocks_to_wait" ] = blocks_to_wait;
+                message[ "blocks_to_wait_for_revelation_address" ] = blocks_to_wait_for_revelation_address;
                 message = JSON.stringify( message );
                 var coinflipPrivateInfo = {}
                 coinflipPrivateInfo[ "player2" ] = player2;
@@ -389,9 +547,61 @@
                 console.log( coinflipPrivateInfo );
                 makePrivateNote( message, player2 );
         }
+        function createOffer( amount, preimage ) {
+                //player 1 runs this
+                var player1Preimage = preimage;
+                console.log( "this is player one's preimage:", player1Preimage );
+                console.log( "this is its length:", player1Preimage.length / 2 );
+                var player1Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player1Preimage, "hex" ) ).toString( "hex" );
+                var player1Keypair = bitcoinjs.ECPair.makeRandom();
+                var player1Privkey = player1Keypair.__D.toString( "hex" );
+                var player1Pubkey = player1Keypair.publicKey.toString( "hex" );
+                var player1KeypairForRevelationAddress = bitcoinjs.ECPair.makeRandom();
+                var player1PrivkeyForRevelationAddress = player1KeypairForRevelationAddress.__D.toString( "hex" );
+                var player1PubkeyForRevelationAddress = player1KeypairForRevelationAddress.publicKey.toString( "hex" );
+                var blocks_to_wait = "8";
+                var blocks_to_wait_for_revelation_address = "4";
+                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
+                var message = {}
+                message[ "msgtype" ] = "offer";
+                message[ "hash" ] = player1Hash;
+                message[ "amount" ] = Number( amount );
+                message[ "pubkey" ] = player1Pubkey;
+                message[ "pubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
+                message[ "blocks_to_wait" ] = blocks_to_wait;
+                message[ "blocks_to_wait_for_revelation_address" ] = blocks_to_wait_for_revelation_address;
+                message[ "offer_expires" ] = Math.floor( Date.now() / 1000 ) + 600;
+                message = JSON.stringify( message );
+                var coinflipPrivateInfo = {}
+                coinflipPrivateInfo[ "player2" ] = "";
+                coinflipPrivateInfo[ "blocks_to_wait" ] = blocks_to_wait;
+                coinflipPrivateInfo[ "blocks_to_wait_for_revelation_address" ] = blocks_to_wait_for_revelation_address;
+                coinflipPrivateInfo[ "amount" ] = Number( amount );
+                coinflipPrivateInfo[ "player1Preimage" ] = player1Preimage;
+                coinflipPrivateInfo[ "player1Hash" ] = player1Hash;
+                coinflipPrivateInfo[ "player1Privkey" ] = player1Privkey;
+                coinflipPrivateInfo[ "player1Pubkey" ] = player1Pubkey;
+                coinflipPrivateInfo[ "player1PrivkeyForRevelationAddress" ] = player1PrivkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player1PubkeyForRevelationAddress" ] = player1PubkeyForRevelationAddress;
+                coinflipPrivateInfo[ "player2Hash" ] = "";
+                coinflipPrivateInfo[ "player2Pubkey" ] = "";
+                coinflipPrivateInfo[ "player2PubkeyForRevelationAddress" ] = "";
+                coinflipPrivateInfo[ "coinflip-address" ] = "";
+                coinflipPrivateInfo[ "player1Ack" ] = "";
+                coinflipPrivateInfo[ "revelation-address" ] = "";
+                localStorage[ "coinflip-private-info" ] = JSON.stringify( coinflipPrivateInfo );
+                console.log( coinflipPrivateInfo );
+                putOfferOnNostr( message );
+        }
 </script>
 <script>
-        async function waitForTheRightNumberOfConfs( txid, num ) {
+        async function waitForTheRightNumberOfConfs( txid, num, player, address ) {
+                if ( player == "player2" ) {
+                        var tx_id = await addressOnceSentMoney( address );
+                        if ( tx_id ) { 
+                                return "You lost :(";
+                        }
+                }
                 console.log( "loading confs for txid", txid + "..."  );
                 num = Number( num );
                 return new Promise( function( resolve, reject ) {
@@ -402,7 +612,7 @@
                         if ( confs < num ) {
                                 console.log( "since the first number was smaller than the second number I will rerun the function that waits for the right number of confs" );
                                 setTimeout( async function() {
-                                        var confs = await waitForTheRightNumberOfConfs( txid, num );
+                                        var confs = await waitForTheRightNumberOfConfs( txid, num, player, address );
                                         resolve( confs );
                                 }, 5000 );
                         } else {
@@ -410,15 +620,32 @@
                         }
                 });
         }
-        async function addyLooper( address ) {
+        async function addyLooper( address, player, stage ) {
+                if ( player == "player1" && stage == "depositIntoRevelationAddress" ) {
+                        var current_blockheight = await getBlockheight();
+                        console.log( "current_blockheight:", current_blockheight );
+                        if ( !sessionStorage[ "block_when_game_started" ] || sessionStorage[ "block_when_game_started" ] == "" ) {
+                                var block_when_game_started = current_blockheight;
+                                sessionStorage[ "block_when_game_started" ] = block_when_game_started;
+                        }
+                        console.log( "block_when_game_started:", Number( sessionStorage[ "block_when_game_started" ] ) );
+                        if ( Number( current_blockheight ) >= Number( sessionStorage[ "block_when_game_started" ] ) + 3 ) {
+                                sessionStorage[ "status" ] = "aborted";
+                                alert( "Aborted because Player 2 took too long to deposit money." );
+                        }
+                }
                 console.log( "loading txid for address", address + "..." );
                 return new Promise( async function( resolve, reject ) {
                         var txid = await getIdOfTxThatSentMeMoney( address );
                         if ( txid == "none" ) {
-                                setTimeout( async function() {
-                                        var txid = await addyLooper( address );
-                                        resolve( txid );
-                                }, 5000 );
+                                if ( sessionStorage[ "status" ] == "aborted" ) {
+                                        resolve( "none" );
+                                } else {
+                                        setTimeout( async function() {
+                                                var txid = await addyLooper( address, player, stage );
+                                                resolve( txid );
+                                        }, 5000 );
+                                }
                         } else {
                                 resolve( txid );
                         }
@@ -428,7 +655,7 @@
                 console.log( "loading spending txid for address", address + "..." );
                 return new Promise( async function( resolve, reject ) {
                         var txid = await addressOnceSentMoney( address );
-                        if ( txid == "none" ) {
+                        if ( !txid ) {
                                 setTimeout( async function() {
                                         var txid = await addyOutLooper( address );
                                         resolve( txid );
@@ -472,7 +699,7 @@
                         if ( json[ "status" ][ "confirmed" ] ) {
                             resolve( ( Number( blockheight ) - Number( json[ "status" ][ "block_height" ] ) ) + 1 );
                         } else {
-                            resolve( "-1" );
+                            resolve( "0".toString() );
                         }
                     }
                 };
@@ -586,13 +813,6 @@
                     OP_EQUAL
                     OP_SWAP
                     OP_DROP
-                    OP_DUP
-                    OP_SIZE
-                    OP_EQUALVERIFY
-                    OP_SWAP
-                    OP_DUP
-                    OP_SIZE
-                    OP_EQUALVERIFY
                     OP_NUMNOTEQUAL
                     OP_IF
                         ${ player1Pubkey }
@@ -612,8 +832,8 @@
             return bitcoinjs.script.fromASM(
                 `
                     OP_SIZE
-                    ${ bitcoinjs.script.number.encode( 15 ).toString( 'hex' ) }
-                    ${ bitcoinjs.script.number.encode( 17 ).toString( 'hex' ) }
+                    ${ bitcoinjs.script.number.encode( 16 ).toString( 'hex' ) }
+                    ${ bitcoinjs.script.number.encode( 18 ).toString( 'hex' ) }
                     OP_WITHIN
                     OP_IF
                         OP_HASH160
@@ -633,17 +853,6 @@
             );
         }
         function player1WonCoinflip( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player1Pubkey, player2Pubkey, player1Preimage, player2Preimage, blocks_to_wait, useraddress ) {
-            // var txid = "3e4e4d0c0d653e51ca69e13d6157f0ddfaa9b2863fd54aa34cd5432c466bff5c";
-            // var txindex = 0;
-            // var original_quantity_of_sats = 1000;
-            // var new_quantity_of_sats = 700;
-            // var player1Privkey = "37482a319bcc4518908ab29934c49dff16e6e332b8784a7d0f98b7bf4b29a619";
-            // var player1Pubkey = "02ea2e7c501df17873f10ef6dce1c7c197fa3666f02a1ae623b06fb718e14090a3";
-            // var player2Pubkey = "033f8a3f6b6385a4b778d4d4d99ea43b91ea3547d4255a56e88f5152265d5de0fd";
-            // var player1Preimage = "dbababababababababababababababab";
-            // var player2Preimage = "dbabababababababababababababac";
-            // var blocks_to_wait = 9;
-            // var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
             var player1Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player1Preimage, "hex" ) ).toString( 'hex' );
             var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, "hex" ) ).toString( 'hex' );
             var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
@@ -702,19 +911,6 @@
             setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
         }
         function player2WonCoinflip( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash ) {
-                    // var txid = "b90e048f22ab07def1a9ded84adafce2d3f36acce679f4196c98d53964ab5f36";
-                    // var txindex = 0;
-                    // var original_quantity_of_sats = 1000;
-                    // var new_quantity_of_sats = 700;
-                    // var player1Pubkey = "02ea2e7c501df17873f10ef6dce1c7c197fa3666f02a1ae623b06fb718e14090a3";
-                    // var player2Privkey = "a38940394c7621ea7b3478db4c02ce28d2e9996c822d5eb4e2abc5118453ec56";
-                    // var player2Pubkey = "033f8a3f6b6385a4b778d4d4d99ea43b91ea3547d4255a56e88f5152265d5de0fd";
-                    // var randomPreimage1 = bitcoinjs.crypto.hash160( buffer.Buffer.from( bitcoinjs.ECPair.makeRandom().__D, "hex" ) ).toString( 'hex' );
-                    // var randomPreimage2 = bitcoinjs.crypto.hash160( buffer.Buffer.from( bitcoinjs.ECPair.makeRandom().__D, "hex" ) ).toString( 'hex' );
-                    // var blocks_to_wait = 9;
-                    // var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
-                    // var player1Hash = "a545114586dcaa12d8acd19ce06ac29166a6581d";
-                    // var player2Hash = "70eaa33585a7ee0cf2b0d0fd1350754a4893e6cf";
                     var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
                     console.log( "witness script:", witnessscript );
                     var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -771,19 +967,11 @@
                     setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
         }
 
-        function withdrawAfterTimelock( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player2Pubkey, blocks_to_wait, player2Hash ) {
-            // var txid = "0341b9dde69da34b04dae016b3eb00b151e0c138cba5da272f2ad29d35af7862";
-            // var txindex = 0;
-            // var original_quantity_of_sats = 1000;
-            // var new_quantity_of_sats = 750;
-            // var player1Privkey = "37482a319bcc4518908ab29934c49dff16e6e332b8784a7d0f98b7bf4b29a619";
-            // var player1Pubkey = 
-"02ea2e7c501df17873f10ef6dce1c7c197fa3666f02a1ae623b06fb718e14090a3";
-            // var player2Pubkey = "033f8a3f6b6385a4b778d4d4d99ea43b91ea3547d4255a56e88f5152265d5de0fd";
-            // var blocks_to_wait = 3;
-            // var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
-            // var player2Hash = "dbd8c4519ccb3eb073e1e15492f98e917cb366c3";
+        function withdrawFromRevelationAddressAfterTimelockAsPlayer1( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player2Pubkey, blocks_to_wait, player2Hash, useraddress ) {
             blocks_to_wait = Number( blocks_to_wait );
+            var player1Pubkey = nobleSecp256k1.getPublicKey( player1Privkey, true );
+            console.log( "ok time to pay attention" );
+            console.log( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
             var witnessscript = reveal_and_redeem( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
             console.log( "witness script:", witnessscript );
             var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -839,17 +1027,7 @@
         }
 
         function revealPreimage( player2Preimage, player1Pubkey, player2Privkey, blocks_to_wait, txid, txindex, original_quantity_of_sats, new_quantity_of_sats, useraddress ) {
-            // var txid = "b90e048f22ab07def1a9ded84adafce2d3f36acce679f4196c98d53964ab5f36";
-            // var txindex = 0;
-            // var original_quantity_of_sats = 500;
-            // var new_quantity_of_sats = 250;
-            // var player1Pubkey = "02ea2e7c501df17873f10ef6dce1c7c197fa3666f02a1ae623b06fb718e14090a3";
-            // var player2Privkey = "a38940394c7621ea7b3478db4c02ce28d2e9996c822d5eb4e2abc5118453ec56";
-            // var player2Pubkey = "033f8a3f6b6385a4b778d4d4d99ea43b91ea3547d4255a56e88f5152265d5de0fd";
             var player2Pubkey = nobleSecp256k1.getPublicKey( player2Privkey, true );
-            // var player2Preimage = "0cababababababababababababababac";
-            // var blocks_to_wait = 3;
-            // var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
             blocks_to_wait = Number( blocks_to_wait );
             var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, 'hex' ) ).toString( 'hex' );
             var witnessscript = reveal_and_redeem( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
@@ -927,6 +1105,19 @@
                         xhttp.send();
                 });
         }
+        function pushBTCpmt( rawtx ) {
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function() {
+                        if ( this.readyState == 4 && ( this.status == 200 || this.status == 201 ) ) {
+                                var json = JSON.parse( this.responseText );
+                                console.log( json );
+                                console.log( "Your transaction was broadcasted, your txid is: " + json[ "tx" ][ "hash" ] );
+                        }
+                };
+                xhttp.open( "POST", "https://api.blockcypher.com/v1/btc/test3/txs/push", true );
+                xhttp.setRequestHeader( "Content-type", "text/plain" );
+                xhttp.send( '{"tx":"' + rawtx + '"}' );
+        }
         function getBlockheight() {
             return new Promise( function( resolve, reject ) {
                 var xhttp = new XMLHttpRequest();
@@ -940,8 +1131,25 @@
                 xhttp.send();
             });
         }
+        function getBlockWhenTransactionWasMined( txid ) {
+            return new Promise( function( resolve, reject ) {
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function() {
+                    if ( this.readyState == 4 && this.status == 200 ) {
+                        var json = JSON.parse( xhttp.responseText );
+                        if ( json[ "status" ][ "confirmed" ] ) {
+                            resolve( Number( json[ "status" ][ "block_height" ] ) );
+                        } else {
+                            resolve( "0".toString() );
+                        }
+                    }
+                };
+                xhttp.open( "GET", "https://blockstream.info/testnet/api/tx/" + txid, true );
+                xhttp.send();
+            });
+        }
         function getTransactionsInvolvingAddress( address ) {
-                 return new Promise( function( resolve, reject ) {
+                return new Promise( function( resolve, reject ) {
                         var xhttp = new XMLHttpRequest();
                         xhttp.onreadystatechange = function() {
                                 if (this.readyState == 4 && this.status == 200) {
@@ -978,7 +1186,7 @@
                             console.log( "here is the possible preimage I got (remember that it might be blank):", possible_preimage );
                             console.log( "if it is blank I will ignore it" );
                             if ( possible_preimage ) {
-                                if ( possible_preimage.length == 30 || possible_preimage.length == 32 ) {
+                                if ( possible_preimage.length == 32 || possible_preimage.length == 34 ) {
                                     console.log( "it was the right size so I will now return it (by the way, this is it:", possible_preimage );
                                     resolve( possible_preimage );
                                 }
@@ -1009,9 +1217,9 @@
                 xhttp.onreadystatechange = function() {
                     if ( this.readyState == 4 && this.status == 200 ) {
                         var json = JSON.parse( xhttp.responseText );
-                            if ( json[ "chain_stats" ][ "spent_txo_count" ] > 0 || json[ "mempool_stats" ][ "spent_txo_count" ] > 0 ) {
-                                resolve( true );
-                            }
+                        if ( json[ "chain_stats" ][ "spent_txo_count" ] > 0 || json[ "mempool_stats" ][ "spent_txo_count" ] > 0 ) {
+                            resolve( true );
+                        }
                         resolve( false );
                     }
                 };
@@ -1021,6 +1229,71 @@
         }
 </script>
 <script>
+        function addressOnceHadMoney( address ) {
+            return new Promise( function( resolve, reject ) {
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function() {
+                    if ( this.readyState == 4 && this.status == 200 ) {
+                        var json = JSON.parse( xhttp.responseText );
+                        if ( json[ "chain_stats" ][ "funded_txo_count" ] > 0 ) {
+                            resolve( true );
+                        }
+                        resolve( false );
+                    }
+                };
+                xhttp.open( "GET", "https://blockstream.info/testnet/api/address/" + address, true );
+                xhttp.send();
+            });
+        }
+</script>
+<script>
+        function putOfferOnNostr( offer ) {
+                console.log( "note: '" + offer + "'" );
+                var now = Math.floor( ( new Date().getTime() ) / 1000 );
+                console.log( now );
+                var newevent = [
+                        0,
+                        pubKeyMinus2,
+                        now,
+                        40,
+                        [],
+                        offer
+                ];
+                var message = JSON.stringify( newevent );
+                console.log( "message: '" + message + "'" );
+                var msghash = bitcoinjs.crypto.sha256( message ).toString( 'hex' );
+                console.log( "msghash: '" + msghash + "'" );
+                nobleSecp256k1.schnorr.sign( msghash, privKey ).then( 
+                        value => { 
+                                sig = value;
+                                console.log( "the sig is:", sig );
+                                nobleSecp256k1.schnorr.verify( 
+                                        sig,
+                                        msghash,
+                                        pubKeyMinus2
+                                ).then(
+                                        value => { 
+                                                console.log( "this should say true if the signature is valid for the above pubkey over the message", value );
+                                                if ( value ) {
+                                                        var fullevent = {
+                                                                "id": msghash,
+                                                                "pubkey": pubKeyMinus2,
+                                                                "created_at": now,
+                                                                "kind": 40,
+                                                                "tags": [],
+                                                                "content": offer,
+                                                                "sig": sig
+                                                        }
+                                                        var sendable = [ "EVENT", fullevent ];
+                                                        sessionStorage.sendable = JSON.stringify( sendable );
+                                                        console.log( "here is what you will send:", sendable );
+                                                        socket.send( '["EVENT",' + JSON.stringify( JSON.parse( sessionStorage.sendable )[ 1 ] ) + ']' );
+                                                 }
+                                        }
+                               );
+                        }
+                );
+        }
         function makeNote( note ) {
                 console.log( "note: '" + note + "'" );
                 var now = Math.floor( ( new Date().getTime() ) / 1000 );
@@ -1094,7 +1367,7 @@
                                         pubKeyMinus2
                                 ).then(
                                         value => {
-                                                console.log( "is the signature valid for the above pubkey over the message 'test'?", value );
+                                                console.log( "this should say true if the signature is valid for the above pubkey over the message", value );
                                                 if ( value ) {
                                                         var fullevent = {
                                                                 "id": msghash,
