@@ -381,6 +381,7 @@
                 if ( Number( amount_in_revelation_address ) < Number( realjson[ "amount" ] ) ) {
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-wrong-amount-opponents-fault" ) );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
                 } else {
                         confLooper( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2 );
                         await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2, "player2", realjson[ "revelation-address" ] );
@@ -419,6 +420,7 @@
                 //TODO: I think I fixed the minor error that caused the following status update to fire every time Player 1 discovered that the money in the revelation address got swept by Player 2. Now I need to test my fix.
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                document.getElementById( "upcoming-statuses" ).innerHTML = "";
         }
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
                 //player 2 runs this
@@ -532,6 +534,7 @@
                                         var player1PreimageLength = player1Preimage.length / 2;
                                         document.getElementById( "status-updates" ).prepend( document.getElementById( "checking-who-won-status" ) );
                                         if ( player2PreimageLength != player1PreimageLength ) {
+                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "withdrawing-or-acquiescing-status" ) );
                                                 var txid = coinflip_txid;
                                                 var txindex = await getOutputNumberOfTxThatSentMeMoney( p2wsh.address, coinflip_txid );
                                                 var original_quantity_of_sats = Number( actual_amount_in_coinflip_address );
@@ -543,10 +546,12 @@
                                                 player1WonCoinflip( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player1Pubkey, player2Pubkey, player1Preimage, player2Preimage, blocks_to_wait, useraddress );
                                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "yay-you-won" ) );
                                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                                                 console.log( "Done! You won the bet!" );
                                         } else {
                                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "oh-no-you-lost" ) );
                                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                                                 console.log( "I lost. :(" );
                                         }
                                 }
@@ -755,10 +760,9 @@
                         console.log( "block_when_game_started:", Number( sessionStorage[ "block_when_game_started" ] ) );
                         if ( Number( current_blockheight ) >= Number( sessionStorage[ "block_when_game_started" ] ) + 3 ) {
                                 sessionStorage[ "status" ] = "aborted";
-                                document.getElementById( "status-updates" ).prepend( "$ Aborted because your opponent took too long" + " (error code 02)" );
-
-//                                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) + " (error code 02)" );
+                                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                         }
                 }
                 console.log( "loading txid for address", address + "..." );
