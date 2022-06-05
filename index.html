@@ -38,7 +38,6 @@
         privKey = privKey.__D.toString( 'hex' );
         var pubKey = nobleSecp256k1.getPublicKey( privKey, true );
         var pubKeyMinus2 = pubKey.substring( 2 );
-        sessionStorage[ "pubkeyMinus2" ] = pubKeyMinus2;
 </script>
 <style>
         * {
@@ -66,7 +65,7 @@
         <p><button id="create-btn">Create</button></p>
         <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
         <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
-        <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #ccc" />
+        <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #cccccc; font-family: monospace;" />
         <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
 <script>
         window.onload = function() {
@@ -106,7 +105,12 @@
                 }
         });
         document.getElementById( "abort" ).addEventListener( "click", function() {
-                confirm( "If you abort at this stage you won't lose any money and everything will reset. Please click ok if that is what you want or click cancel to continue playing the game." );
+                var conf_message = "If you abort at this stage you won't lose any money and everything will reset. Please click ok if that is what you want or click cancel to continue playing the game.";
+                if ( confirm( conf_message ) ) {
+                        sessionStorage.clear();
+                        localStorage.clear();
+                        window.location.reload();
+                }
         });
         document.getElementById( "create-btn" ).addEventListener( "click", function() {
                 var amount = document.getElementById( "amount" ).value;
