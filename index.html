@@ -60,6 +60,7 @@
                 <p style="display: inline-block; vertical-align: middle;"><button id="new-coinflip-btn">Create new coinflip</button></p>
                 <div id="orderbook" style="font-family: monospace;">
                         <div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">Player 1</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">Amount</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">Expiry</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 74px; text-align: center;">Accept?</div><br>
+                        <div id="empty-msg">The orderbook is currently empty</div>
                 </div>
         </div>
         <div id="creation-and-status-wrapper" style="display: none;">
@@ -71,7 +72,7 @@
                         <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
                         <p><input type="text" id="address" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
                         <p>Amount of sats to bet</p>
-                        <p><input type="text" id="amount" placeholder="(min 1000, max 10000)" style="width: 100%; max-width: 350px;" /></p>
+                        <p><input type="text" id="amount" placeholder="min 1000, max 10000" style="width: 100%; max-width: 350px;" /></p>
                         <p><button id="heads-btn">Heads</button></p>
                         <p><button id="tails-btn">Tails</button></p>
                         <p><button id="random-btn">Random</button></p>
@@ -204,8 +205,8 @@
         });
         document.getElementById( "create-btn" ).addEventListener( "click", function() {
                 var amount = document.getElementById( "amount" ).value;
-                if ( Number( amount ) < 1000 ) {
-                        alert( "Minimum amount is 1000" );
+                if ( Number( amount ) < 1000 || Number( amount ) > 10000 ) {
+                        alert( "Minimum amount is 1000 sats, maximum is 10000 sats" );
                 } else {
                         var heads_or_tails = ( document.getElementById( "obverse" ).style.display == "block" ) ? "heads":"tails";
                         if ( heads_or_tails == "heads" ) {
@@ -234,6 +235,7 @@
                         var amount = JSON.parse( offer )[ "amount" ];
                         var current_time = Math.floor( Date.now() / 1000 );
                         if ( expiry > current_time ) {
+                                document.getElementById( "empty-msg" ).style.display = "none";
                                 document.getElementById( "orderbook" ).innerHTML += `<div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">` + player1.substring( 0, 12 ) +  `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">` + amount.toString() + " sats" + `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">` + new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString() + `</div><a href="/coinflip/offer.html?id=` + id + `"><div style="border: 1px solid green; border-radius: 5px; width: 60px; margin-left: 7px; display: inline-block; text-align: center; background-color: lightgreen; color: white; font-weight: bold; cursor: pointer;">Accept</div></a><br>`;
                         }
 
