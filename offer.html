@@ -45,34 +45,103 @@
                 margin: 0px;
                 padding: 0px;
         }
+        .status-update::before {
+                content: '$ ';
+        }
+        .status-update {
+                margin-bottom: 15px;
+        }
 </style>
 </head>
 <body>
         <h1>This is a work in progress, it doesn't work yet</h1>
-        <h1>Accept a coinflip</h1>
-        <p>This coinflip site uses a remote coinflipping technique invented in 1981 by Michael Blum. Your opponent picked Heads or Tails and will shortly commit to it via a cryptographic hash on bitcoin's blockchain. Your role is to guess if your opponent picked Heads or Tails. Your opponent cannot change their choice after you guess because the blockchain is irreversible. If you guess correctly, you win the bet amount, otherwise your opponent wins. The rules of the game are enforced by a bitcoin smart contract. There are no third parties involved, only you and your opponent.</p>
-        <p>Try clicking Heads or Tails below. You can see how your guess will appear on the blockchain (like your opponent's choice, your guess is also hashed). It is displayed as a 40 character string under the coin. Be aware that every time you play the game the hashes will be different because they are not literally a hash of the word Heads or the word Tails. The strings are hashes of random numbers that are either 16 bytes long (Heads) or 17 bytes long (Tails).</p>
-        <p>When you are ready to commit to your guess, click Accept. Your opponent will be notified that you accepted their offer. You'll only need to pay money to commit your guess to the blockchain if your opponent agrees to play with you. You can also abort at any time except if your opponent wins (which is sort of an auto-abort situation anyway, one where you also can't get your money back).</p>
-        <p>Your opponent</p>
-        <p><input type="text" id="opponent" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
-        <p>Amount of sats you can win</p>
-        <p><input type="text" id="amount" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
-        <p>When this offer expires</p>
-        <p><input type="text" id="expiry" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
-        <p>The hash of your opponent's choice of Heads or Tails</p>
-        <p><input type="text" id="opp-hash" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
-        <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
-        <p><input type="text" id="address-one" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
-        <p>Bitcoin address where you'd like to receive your deposit back (if you win -- note that this protocol uses two separate addresses for your deposit and your opponent's deposit and it also disperses funds in two separate transactions. Provide two different bitcoin addresses to avoid address reuse, or use the same one if you aren't concerned about privacy.)</p>
-        <p><input type="text" id="address-two" placeholder="tb1b8fsad6tuij76asdf23abbsdfa9baasdf0bo0hm" style="width: 100%; max-width: 350px;" /></p>
-        <p>Your guess</p>
-        <p><button id="heads-btn">Heads</button></p>
-        <p><button id="tails-btn">Tails</button></p>
-        <p><button id="random-btn">Random</button></p>
-        <p><button id="accept-btn">Accept</button></p>
-        <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
-        <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
-        <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #cccccc; font-family: monospace;" />
+        <div id="acceptance-wrapper">
+                <h1>Accept a coinflip</h1>
+                <p>This coinflip site uses a remote coinflipping technique invented in 1981 by Michael Blum. Your opponent picked Heads or Tails and will shortly commit to it via a cryptographic hash on bitcoin's blockchain. Your role is to guess if your opponent picked Heads or Tails. Your opponent cannot change their choice after you guess because the blockchain is irreversible. If you guess correctly, you win the bet amount, otherwise your opponent wins. The rules of the game are enforced by a bitcoin smart contract. There are no third parties involved, only you and your opponent.</p>
+                <p>Try clicking Heads or Tails below. You can see how your guess will appear on the blockchain (like your opponent's choice, your guess is also hashed). It is displayed as a 40 character string under the coin. Be aware that every time you play the game the hashes will be different because they are not literally a hash of the word Heads or the word Tails. The strings are hashes of random numbers that are either 16 bytes long (Heads) or 17 bytes long (Tails).</p>
+                <p>When you are ready to commit to your guess, click Accept. Your opponent will be notified that you accepted their offer. You'll only need to pay money to commit your guess to the blockchain if your opponent agrees to play with you. You can also abort at any time except if your opponent wins (which is sort of an auto-abort situation anyway, one where you also can't get your money back).</p>
+                <p>Your opponent</p>
+                <p><input type="text" id="opponent" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>Amount of sats you can win</p>
+                <p><input type="text" id="amount" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>When this offer expires</p>
+                <p><input type="text" id="expiry" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>The hash of your opponent's choice of Heads or Tails</p>
+                <p><input type="text" id="opp-hash" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
+                <p><input type="text" id="address-one" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
+                <p>Bitcoin address where you'd like to receive your deposit back (if you win -- note that this protocol uses two separate addresses for your deposit and your opponent's deposit and it also disperses funds in two separate transactions. Provide two different bitcoin addresses to avoid address reuse, or use the same one if you aren't concerned about privacy.)</p>
+                <p><input type="text" id="address-two" placeholder="tb1b8fsad6tuij76asdf23abbsdfa9baasdf0bo0hm" style="width: 100%; max-width: 350px;" /></p>
+                <p>Your guess</p>
+                <p><button id="heads-btn">Heads</button></p>
+                <p><button id="tails-btn">Tails</button></p>
+                <p><button id="random-btn">Random</button></p>
+                <p><button id="accept-btn">Accept</button></p>
+                <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
+                <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
+                <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #cccccc; font-family: monospace;" />
+        </div>
+        <div id="status-updates-wrapper">
+                <h1>Current status (follow any instructions that appear in the top line)</h1>
+                <div id="status-updates" style="background-color: black; color: green; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
+                </div>
+                <h1>Upcoming statuses (don't follow any of the instructions in this box til they appear at the top of Current Status)</h1>
+                <div id="upcoming-statuses" style="background-color: black; color: green; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
+                        <div id="awaiting-acceptance-status" class="status-update">
+                                Waiting for you to accept your opponent's offer or for their offer to expire
+                        </div>
+                        <div id="awaiting-ack-status" class="status-update">
+                                Waiting for your opponent to acknowledge that you accepted their coinflip or for their offer to expire
+                        </div>
+                        <div id="awaiting-your-deposit-status" class="status-update">
+                                Waiting for you to deposit money into your deposit address or for 3 bitcoin blocks to pass by for auto-abortion
+                        </div>
+                        <div id="awaiting-opponents-deposit-status" class="status-update">
+                                Waiting for your opponent to deposit money into their deposit address or for 8 bitcoin blocks to pass by for auto-abortion (and recovery of the money you deposited into your deposit address)
+                        </div>
+                        <div id="awaiting-your-guess-status" class="status-update">
+                                Waiting for you to reveal your guess (Heads or Tails) or for 4 bitcoin blocks to pass by for auto-abortion
+                        </div>
+                        <div id="checking-who-won-status" class="status-update">
+                                Waiting for your opponent to withdraw their earnings (if you guessed incorrectly) or to withdraw your winnings (if you guessed correctly) after 8 blocks
+                        </div>
+                        <div id="finished-status" class="status-update">
+                                Finished
+                        </div>
+                </div>
+                <div id="invisible-upcoming-statuses" style="display: none;">
+                        <div id="deposit-into-the-coinflip-address-status" class="status-update">
+                                Deposit *exactly* <span id="status-amount"></span> sats into this address: <span id="status-coinflip-address"></span> If you send the wrong amount, even by a little bit, you could automatically lose your money. Remember that if you win you’ll get back your money in 8 blocks, plus your opponent's money. If your opponent wins you will lose your money. If your opponent would have won but aborts after you deposit your money, or if they deposit the wrong amount into their deposit address, you'll get your money back in 8 bitcoin blocks (but probably not theirs, unless you get lucky and they abort after depositing their money). Also, be sure to keep your browser open til the game ends (which is 8 bitcoin blocks after you make your deposit, i.e. hopefully around 80 minutes after you make your deposit). If you close your browser before you withdraw your winnings, you'll abort the protocol and may lose money to your opponent, even if you guessed Heads or Tails correctly. Also, your private keys and cookies could be lost, and you can lose money that way too.
+                        </div>
+                        <div id="your-deposit-detected" class="status-update">
+                                Deposit detected – awaiting result – you should receive 1x the bet amount from your opponent shortly (if not, that means your opponent aborted, and you’ll get your deposit back in 8 blocks, minus a bit in transaction fees)
+                        </div>
+                        <div id="opponents-deposit-detected" class="status-update">
+                                Your opponent deposited 1x the bet amount. Awaiting 1 block confirmation to sweep that money and reveal your guess.
+                        </div>
+                        <div id="opponents-deposit-swept" class="status-update">
+                                Your opponent's deposit was swept and you revealed your guess. If you won you can withdraw your winnings in 8 blocks. If your opponent won the money will probably leave the deposit address shortly. (If your opponent won but they choose to abort before sweeping their winnings, you can still take the money in 8 blocks, so keep the browser open til the game ends.)
+                        </div>
+                        <div id="aborted-due-to-timeout-opponents-fault" class="status-update">
+                                Aborted because your opponent took too long
+                        </div>
+                        <div id="aborted-due-to-timeout-your-fault" class="status-update">
+                                Aborted because you took too long
+                        </div>
+                        <div id="aborted-due-to-wrong-amount-opponents-fault" class="status-update">
+                                Aborted because your opponent put the wrong amount in their deposit address
+                        </div>
+                        <div id="aborted-due-to-wrong-amount-your-fault" class="status-update">
+                                Aborted because you put the wrong amount in your deposit address
+                        </div>
+                        <div id="oh-no-you-lost" class="status-update">
+                                Oh no! You lost. :(
+                        </div>
+                        <div id="yay-you-won" class="status-update">
+                                Yay! You won! Your winnings are now being withdrawn to your bitcoin address.
+                        </div>
+                </div>
+        </div>
         <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
 <script>
         window.onload = function() {
@@ -81,6 +150,7 @@
                         sessionStorage[ "sixteenBytePreimage" ] = sixteenBytePreimage;
                 }
                 document.getElementById( "hash" ).value = bitcoinjs.crypto.hash160( buffer.Buffer.from( sessionStorage[ "sixteenBytePreimage" ], "hex" ) ).toString( "hex" );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-acceptance-status" ) );
         }
 </script>
 <script>
@@ -120,12 +190,14 @@
                 }
         });
         document.getElementById( "accept-btn" ).addEventListener( "click", function() {
+                document.getElementById( "acceptance-wrapper" ).style.display = "none";
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-ack-status" ) );
                 acceptOrRejectCoinflipOffer( sessionStorage[ "offer-message" ], document.getElementById( "opponent" ).value );
         });
-        function isJsonString(str) {
+        function isJsonString( str ) {
             try {
-                JSON.parse(str);
-            } catch (e) {
+                JSON.parse( str );
+            } catch ( e ) {
                 return false;
             }
             return true;
@@ -136,10 +208,16 @@
                         var player1 = opponents_nostr_pubkey;
                         var amount = JSON.parse( offer )[ "amount" ];
                         var opp_hash = JSON.parse( offer )[ "hash" ];
-                        document.getElementById( "opponent" ).value = player1;
-                        document.getElementById( "amount" ).value = amount;
-                        document.getElementById( "expiry" ).value = new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString();
-                        document.getElementById( "opp-hash" ).value = opp_hash;
+                        var current_time = Math.floor( Date.now() / 1000 );
+                        if ( expiry > current_time ) {
+                                document.getElementById( "opponent" ).value = player1;
+                                document.getElementById( "amount" ).value = amount;
+                                document.getElementById( "expiry" ).value = new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString();
+                                document.getElementById( "opp-hash" ).value = opp_hash;
+                        } else {
+                                document.body.innerHTML = "";
+                                document.body.innerHTML = "Sorry! This offer expired.";
+                        }
                 }
         }
 </script>
@@ -285,8 +363,10 @@
                 //abort if the amount in the revelation address is lower than the agreed upon amount
                 var amount_in_revelation_address = await getAmountOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
                 if ( Number( amount_in_revelation_address ) < Number( realjson[ "amount" ] ) ) {
-                        alert( "Aborted because the other player sent the wrong amount of money" );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-wrong-amount-opponents-fault" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                 } else {
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-detected" ) );
                         confLooper( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2 );
                         await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2, "player2", realjson[ "revelation-address" ] );
                         var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
@@ -297,8 +377,9 @@
                         var player1PubkeyForRevelationAddress = realjson[ "player1PubkeyForRevelationAddress" ];
                         var player2Preimage = realjson[ "player2Preimage" ];
                         var hash = realjson[ "player2Hash" ];
-                        var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
+                        var useraddress_for_revelation_address = document.getElementById( "address-one" ).value;
                         revealPreimage( player2Preimage, player1PubkeyForRevelationAddress, player2PrivkeyForRevelationAddress, blocks_to_wait_for_revelation_address, revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_revealing_preimage, useraddress_for_revelation_address );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-swept" ) );
                         console.log( "Almost done! You withdrew from the revelation address." );
                 }
         }
@@ -318,17 +399,22 @@
                 var hash = realjson[ "player2Hash" ];
                 var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
                 withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
-                console.log( "Aborted because player 2 took too long to reveal their preimage. If you waited any longer your money would be at risk." );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
         }
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
                 //player 2 runs this
                 var coinflip_txid = await addyLooper( realjson[ "coinflip-address" ], "player2", "sweepFromCoinflipAddress" );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "your-deposit-detected" ) );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-deposit-status" ) );
                 sessionStorage[ coinflip_txid ] = "0";
                 confLooper( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ) );
                 var didILose = await waitForTheRightNumberOfConfs( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ), "player2", realjson[ "coinflip-address" ] );
                 //Stop running "waitfortherightnumberofconfs" if I see that the other party withdrew the money, i.e. if the address has a spent txo, and alert the player that they lost.
                 if ( didILose == "You lost :(" ) {
-                        alert( "Oh no! You lost :(" );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "oh-no-you-lost" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        console.log( "Oh no, you lost. :(" );
                 } else {
                         var txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "coinflip-address" ], coinflip_txid );
                         var original_quantity_of_sats = ( Number( realjson[ "amount" ] ) * 2 );
@@ -341,8 +427,10 @@
                         var randomPreimage1 = getRandom16or17BytePreimage();
                         var randomPreimage2 = getRandom16or17BytePreimage();
                         var blocks_to_wait = realjson[ "blocks_to_wait" ];
-                        var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
+                        var useraddress = document.getElementById( "address-two" ).value;
                         player2WonCoinflip( coinflip_txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "yay-you-won" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                         console.log( "Done! You won the bet!" );
                 }
         }
@@ -352,6 +440,10 @@
                 var realjson = JSON.parse( localStorage[ "coinflip-private-info" ] );
                 console.log( "here are the contents of coinflip-private-info at the point when I am trying to write a script to sweep the revelation address:", realjson );
                 if ( json[ "player2Hash" ] == realjson[ "player2Hash" ] ) {
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-your-deposit-status" ) );
+                        document.getElementById( "status-amount" ).innerText = ( Number( realjson[ "amount" ] ) * 2 ).toString();
+                        document.getElementById( "status-coinflip-address" ).innerText = realjson[ "coinflip-address" ];
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "deposit-into-the-coinflip-address-status" ) );
                         console.log( "Send", ( Number( realjson[ "amount" ] ) * 2 ), "sats to this address:" );
                         console.log( realjson[ "coinflip-address" ] );
                         //run a sweep function that takes money out of the revelation address after however many confs you agreed on for the revelation address
@@ -638,7 +730,8 @@
                         console.log( "block_when_game_started:", Number( sessionStorage[ "block_when_game_started" ] ) );
                         if ( Number( current_blockheight ) >= Number( sessionStorage[ "block_when_game_started" ] ) + 3 ) {
                                 sessionStorage[ "status" ] = "aborted";
-                                alert( "Aborted because Player 2 took too long to deposit money." );
+                                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
+                                document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                         }
                 }
                 console.log( "loading txid for address", address + "..." );
@@ -915,7 +1008,7 @@
               }
             }
             psbt.finalizeInput( 0, getFinalScripts );
-            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
+            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );pushBTCpmt( psbt.extractTransaction().toHex() );}, 1000 );
         }
         function player2WonCoinflip( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash ) {
                     var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
@@ -971,7 +1064,7 @@
                       }
                     }
                     psbt.finalizeInput( 0, getFinalScripts );
-                    setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
+                    setTimeout( function() {console.log( psbt.extractTransaction().toHex() );pushBTCpmt( psbt.extractTransaction().toHex() );}, 1000 );
         }
 
         function withdrawFromRevelationAddressAfterTimelockAsPlayer1( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player2Pubkey, blocks_to_wait, player2Hash, useraddress ) {
@@ -1028,7 +1121,7 @@
               }
             }
             psbt.finalizeInput( 0, getFinalScripts );
-            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
+            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );pushBTCpmt( psbt.extractTransaction().toHex() );}, 1000 );
         }
 
         function revealPreimage( player2Preimage, player1Pubkey, player2Privkey, blocks_to_wait, txid, txindex, original_quantity_of_sats, new_quantity_of_sats, useraddress ) {
@@ -1087,7 +1180,7 @@
               }
             }
             psbt.finalizeInput( 0, getFinalScripts );
-            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );}, 1000 );
+            setTimeout( function() {console.log( psbt.extractTransaction().toHex() );pushBTCpmt( psbt.extractTransaction().toHex() );}, 1000 );
         }
 
         function getPreimageFromTransactionThatSpendsAnHTLC( txid, pmthash ) {
