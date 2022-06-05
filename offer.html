@@ -62,9 +62,9 @@
         <p>The hash of your opponent's choice of Heads or Tails</p>
         <p><input type="text" id="opp-hash" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
         <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
-        <p><input type="text" id="address-one" placeholder="bc1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
+        <p><input type="text" id="address-one" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
         <p>Bitcoin address where you'd like to receive your deposit back (if you win -- note that this protocol uses two separate addresses for your deposit and your opponent's deposit and it also disperses funds in two separate transactions. Provide two different bitcoin addresses to avoid address reuse, or use the same one if you aren't concerned about privacy.)</p>
-        <p><input type="text" id="address-two" placeholder="bc1b8fsad6tuij76asdf23abbsdfa9baasdf0bo0hm" style="width: 100%; max-width: 350px;" /></p>
+        <p><input type="text" id="address-two" placeholder="tb1b8fsad6tuij76asdf23abbsdfa9baasdf0bo0hm" style="width: 100%; max-width: 350px;" /></p>
         <p>Your guess</p>
         <p><button id="heads-btn">Heads</button></p>
         <p><button id="tails-btn">Tails</button></p>
@@ -130,10 +130,10 @@
             }
             return true;
         }
-        function displayOffer( offer, id ) {
+        function displayOffer( offer, id, opponents_nostr_pubkey ) {
                 if ( isJsonString( offer ) && JSON.parse( offer )[ "msgtype" ] && JSON.parse( offer )[ "hash" ] && JSON.parse( offer )[ "amount" ] && JSON.parse( offer )[ "pubkey" ] && JSON.parse( offer )[ "pubkeyForRevelationAddress" ] && JSON.parse( offer )[ "blocks_to_wait" ] && JSON.parse( offer )[ "blocks_to_wait_for_revelation_address" ] &&  JSON.parse( offer )[ "offer_expires" ] ) {
                         var expiry = JSON.parse( offer )[ "offer_expires" ];
-                        var player1 = JSON.parse( offer )[ "pubkey" ];
+                        var player1 = opponents_nostr_pubkey;
                         var amount = JSON.parse( offer )[ "amount" ];
                         var opp_hash = JSON.parse( offer )[ "hash" ];
                         document.getElementById( "opponent" ).value = player1;
@@ -208,7 +208,7 @@
                         console.log( event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")" );
                 } else if ( event[ 2 ].kind == 40 ) {
                         sessionStorage[ "offer-message" ] = event[ 2 ].content
-                        displayOffer( event[ 2 ].content, event[ 2 ].id );
+                        displayOffer( event[ 2 ].content, event[ 2 ].id, event[ 2 ].pubkey );
                 }
         });
 </script>
@@ -1351,6 +1351,8 @@
         }
         function makePrivateNote( note, recipientpubkey ) {
                 console.log( "note: '" + note + "'" );
+                console.log( "ok time to pay attention" );
+                console.log( recipientpubkey );
                 var now = Math.floor( ( new Date().getTime() ) / 1000 );
                 console.log( now );
                 var privatenote = encrypt( privKey, recipientpubkey, note );
