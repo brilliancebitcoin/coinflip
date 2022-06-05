@@ -15,3 +15,5 @@ Try the game here: https://brilliancebitcoin.github.io/coinflip/index.html
 (5) I haven't tested what happens if you play the game in two browser sessions that share the same browser storage. It will probably break. So far I always test it with one window in incognito mode and I recommend doing that if you want it to work.
 
 (6) Did I say smart contract? Yes, I did. A small program I wrote in Bitcoin Script gets a blinded bit commitment from both users and then runs XNOR on it after the users reveal their bit commitment. If player 2 correctly guessed player 1's bit (1 or 0) then player 2 gets the money in the address, otherwise player 1 gets it. If one party withholds info, the protocol either aborts or that party loses money, depending on circumstances. Also, there is no oracle and no dependency on any third parties except the ordinary trust that all bitcoiners place in the incentives of miners to keep mining and not collude with one another to censor your transactions.
+
+(7) Please alert me to any bugs you find.
