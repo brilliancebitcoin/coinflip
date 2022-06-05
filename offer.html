@@ -160,15 +160,17 @@
         sessionStorage[ "selfsubscription" ] = subscription;
         setTimeout( function() {socket.send( sessionStorage[ "selfsubscription" ] );}, 1000 );
 
-        var filter = {
-                "ids": [
-                        urlParams.get( "id" )
-                ]
-        };
-        var subscription2 = [ "REQ", "get-url-event", filter ];
-        subscription2 = JSON.stringify( subscription2 );
-        sessionStorage[ "urlevent" ] = subscription2;
-        setTimeout( function() {socket.send( sessionStorage[ "urlevent" ] );}, 1000 );
+        if ( urlParams.get( "id" ) ) {
+                var filter = {
+                        "ids": [
+                                urlParams.get( "id" )
+                        ]
+                };
+                var subscription2 = [ "REQ", "get-url-event", filter ];
+                subscription2 = JSON.stringify( subscription2 );
+                sessionStorage[ "urlevent" ] = subscription2;
+                setTimeout( function() {socket.send( sessionStorage[ "urlevent" ] );}, 1000 );
+        }
 
         function subscribe( pubkey ) {
           var filter = {
