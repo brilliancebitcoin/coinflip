@@ -415,7 +415,8 @@
                 var hash = realjson[ "player2Hash" ];
                 var useraddress_for_revelation_address = document.getElementById( "address" ).value;
                 withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
-                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
+                document.getElementById( "status-updates" ).prepend( "$ Aborted because your opponent took too long" + " (error code 01)" );
+//                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
         }
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
@@ -753,7 +754,9 @@
                         console.log( "block_when_game_started:", Number( sessionStorage[ "block_when_game_started" ] ) );
                         if ( Number( current_blockheight ) >= Number( sessionStorage[ "block_when_game_started" ] ) + 3 ) {
                                 sessionStorage[ "status" ] = "aborted";
-                                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
+                                document.getElementById( "status-updates" ).prepend( "$ Aborted because your opponent took too long" + " (error code 02)" );
+
+//                                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) + " (error code 02)" );
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                         }
                 }
