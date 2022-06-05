@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
+<script>
+        localStorage.clear();
+        sessionStorage.clear();
+</script>
 <script src="https://bitcoincore.tech/apps/bitcoinjs-ui/lib/bitcoinjs-lib.js"></script>
 <script src="https://bundle.run/varuint-bitcoin@1.1.2"></script>
 <script src="https://bundle.run/bip39@3.0.4"></script>
@@ -154,16 +158,6 @@
                 <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
         </div>
 <script>
-        window.onload = function() {
-                if ( !sessionStorage[ "sixteenBytePreimage" ] || sessionStorage[ "sixteenBytePreimage" ] == "" ) {
-                        var sixteenBytePreimage = get16BytePreimage();
-                        sessionStorage[ "sixteenBytePreimage" ] = sixteenBytePreimage;
-                }
-                document.getElementById( "hash" ).value = bitcoinjs.crypto.hash160( buffer.Buffer.from( sessionStorage[ "sixteenBytePreimage" ], "hex" ) ).toString( "hex" );
-                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-initiation-status" ) );
-        }
-</script>
-<script>
         document.getElementById( "new-coinflip-btn" ).addEventListener( "click", function() {
                 document.getElementById( "orderbook-wrapper" ).style.display = "none";
                 document.getElementById( "creation-and-status-wrapper" ).style.display = "block";
@@ -240,6 +234,12 @@
                         }
 
                 }
+        }
+</script>
+<script>
+        window.onload = function() {
+                document.getElementById( "random-btn" ).click();
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-initiation-status" ) );
         }
 </script>
 <script>
