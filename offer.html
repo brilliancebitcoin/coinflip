@@ -376,8 +376,6 @@
                         var player2PubkeyForRevelationAddress = json[ "player2PubkeyForRevelationAddress" ];
                         var blocks_to_wait = Number( realjson[ "blocks_to_wait" ] );
                         var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
-                        console.log( "ok time to pay attention" );
-                        console.log( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
                         var witnessscript = prepCoinflip( player1Hash, player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
                         console.log( "witness script:", witnessscript );
                         var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -979,8 +977,6 @@
         function withdrawFromRevelationAddressAfterTimelockAsPlayer1( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player2Pubkey, blocks_to_wait, player2Hash, useraddress ) {
             blocks_to_wait = Number( blocks_to_wait );
             var player1Pubkey = nobleSecp256k1.getPublicKey( player1Privkey, true );
-            console.log( "ok time to pay attention" );
-            console.log( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
             var witnessscript = reveal_and_redeem( player2Hash, player1Pubkey, player2Pubkey, blocks_to_wait );
             console.log( "witness script:", witnessscript );
             var p2wsh = bitcoinjs.payments.p2wsh({redeem: {output: witnessscript, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
@@ -1351,8 +1347,6 @@
         }
         function makePrivateNote( note, recipientpubkey ) {
                 console.log( "note: '" + note + "'" );
-                console.log( "ok time to pay attention" );
-                console.log( recipientpubkey );
                 var now = Math.floor( ( new Date().getTime() ) / 1000 );
                 console.log( now );
                 var privatenote = encrypt( privKey, recipientpubkey, note );
