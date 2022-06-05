@@ -134,10 +134,10 @@
             }
             return true;
         }
-        function processOffer( offer, id ) {
+        function processOffer( offer, id, player_ones_nostr_pubkey ) {
                 if ( isJsonString( offer ) && JSON.parse( offer )[ "msgtype" ] && JSON.parse( offer )[ "hash" ] && JSON.parse( offer )[ "amount" ] && JSON.parse( offer )[ "pubkey" ] && JSON.parse( offer )[ "pubkeyForRevelationAddress" ] && JSON.parse( offer )[ "blocks_to_wait" ] && JSON.parse( offer )[ "blocks_to_wait_for_revelation_address" ] &&  JSON.parse( offer )[ "offer_expires" ] ) {
                         var expiry = JSON.parse( offer )[ "offer_expires" ];
-                        var player1 = JSON.parse( offer )[ "pubkey" ];
+                        var player1 = player_ones_nostr_pubkey;
                         var amount = JSON.parse( offer )[ "amount" ];
                         document.getElementById( "orderbook" ).innerHTML += `<div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">` + player1.substring( 0, 12 ) +  `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">` + amount.toString() + " sats" + `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">` + new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString() + `</div><a href="/coinflip/offer.html?id=` + id + `"><div style="border: 1px solid green; border-radius: 5px; width: 60px; margin-left: 7px; display: inline-block; text-align: center; background-color: lightgreen; color: white; font-weight: bold; cursor: pointer;">Accept</div></a><br>`;
                 }
@@ -203,7 +203,7 @@
                 } else if ( event[ 2 ].kind == 1 ) {
                         console.log( event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")" );
                 } else if ( event[ 2 ].kind == 40 ) {
-                        processOffer( event[ 2 ].content, event[ 2 ].id );
+                        processOffer( event[ 2 ].content, event[ 2 ].id, event[ 2 ].pubkey );
                 }
         });
 </script>
