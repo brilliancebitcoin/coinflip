@@ -401,6 +401,7 @@
                 //player 1 runs this
                 var revelation_txid = await addyLooper( realjson[ "revelation-address" ], "player1", "sweepFromRevelationAddress" );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "your-deposit-detected" ) );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-guess-status" ) );
                 sessionStorage[ revelation_txid ] = "0";
                 var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
                 confLooper( revelation_txid, blocks_to_wait_for_revelation_address );
@@ -522,7 +523,6 @@
                                         //TODO_TEST: Test what happens if player 2 decides to make a race condition here by broadcasting their preimage-based withdrawal at the same time as player 1's timelock-based withdrawal. What ought to happen is that player 1 should still get player 2's preimage and use it to try to withdraw from the coinflip address if they won. Status: I tried to create a race condition after player 1 broadcasted a transaction withdrawing their money but I got an error that said my transaction needs at least one input. I kind of expected it to say you can't spend an input that's already spent, and I also wondered if it might say I need to bump the fee higher to do rbf (which I don't think was even enabled), but the error I got is a little different from both of those (though it is kind of similar to the first one). I decoded the transaction on blockcypher and it seemed to have an input to me. So I'm not sure what to think of that but now I want to test what happens if player 2 broadcasts first.
                                         sweepMoneyFromRevelationAddressAsPlayer1( coinflip_private_info );
                                         console.log( coinflip_private_info[ "revelation-address" ] );
-                                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-guess-status" ) );
                                         var player2Preimage = await preimageLooper( coinflip_private_info[ "revelation-address" ], coinflip_private_info[ "player2Hash" ] );
                                         document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-guess-detected" ) );
                                         var player2PreimageLength = player2Preimage.length / 2;
