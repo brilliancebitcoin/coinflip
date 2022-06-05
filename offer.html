@@ -100,7 +100,7 @@
                                 Waiting for your opponent to deposit money into their deposit address or for 8 bitcoin blocks to pass by for auto-abortion (and recovery of the money you deposited into your deposit address) -- remember that your opponent may wait for your transaction to confirm 1 to 4 times (which is likely to take about 10 to 40 minutes) before depositing money into their deposit address
                         </div>
                         <div id="awaiting-your-guess-status" class="status-update">
-                                Waiting for you to reveal your guess (Heads or Tails) or for 4 bitcoin blocks to pass by for auto-abortion
+                                Your opponent deposited 1x the bet amount. Waiting for you to reveal your guess (Heads or Tails) or for 4 bitcoin blocks to pass by for auto-abortion
                         </div>
                         <div id="checking-who-won-status" class="status-update">
                                 Waiting for your opponent to withdraw their earnings (if you guessed incorrectly) or to withdraw your winnings (if you guessed correctly) after 8 blocks
@@ -117,7 +117,7 @@
                                 Deposit detected – awaiting result – you should receive 1x the bet amount from your opponent shortly (if not, that means your opponent aborted, and you’ll get your deposit back in 8 blocks, minus a bit in transaction fees)
                         </div>
                         <div id="opponents-deposit-detected" class="status-update">
-                                Your opponent deposited 1x the bet amount. Awaiting 1 confirmation (usually about 10 minutes) to sweep that money and reveal your guess. (If you watch this screen it will auto update with new instructions once it detects that your opponent's transaction got 1 confirmation.)
+                                Awaiting 1 confirmation (usually about 10 minutes) on your opponent's deposit transaction before sweeping their money and revealing your guess. (If you watch this screen it will auto update with new instructions once it detects that your opponent's transaction got 1 confirmation.)
                         </div>
                         <div id="opponents-deposit-swept" class="status-update">
                                 Your opponent's deposit was swept and you revealed your guess. If you won you can withdraw your winnings in 8 blocks. If your opponent won the money will probably leave the deposit address shortly. (If your opponent won but they choose to abort before sweeping their winnings, you can still take the money in 8 blocks, so keep the browser open til the game ends.)
@@ -371,7 +371,9 @@
                 if ( Number( amount_in_revelation_address ) < Number( realjson[ "amount" ] ) ) {
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-wrong-amount-opponents-fault" ) );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
                 } else {
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-your-guess-status" ) );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-detected" ) );
                         confLooper( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2 );
                         await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2, "player2", realjson[ "revelation-address" ] );
@@ -407,6 +409,7 @@
                 withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                document.getElementById( "upcoming-statuses" ).innerHTML = "";
         }
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
                 //player 2 runs this
@@ -420,6 +423,7 @@
                 if ( didILose == "You lost :(" ) {
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "oh-no-you-lost" ) );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
                         console.log( "Oh no, you lost. :(" );
                 } else {
                         var txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "coinflip-address" ], coinflip_txid );
@@ -437,6 +441,7 @@
                         player2WonCoinflip( coinflip_txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "yay-you-won" ) );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
                         console.log( "Done! You won the bet!" );
                 }
         }
@@ -738,6 +743,7 @@
                                 sessionStorage[ "status" ] = "aborted";
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                         }
                 }
                 console.log( "loading txid for address", address + "..." );
