@@ -405,7 +405,7 @@
                 sessionStorage[ revelation_txid ] = "0";
                 var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
                 confLooper( revelation_txid, blocks_to_wait_for_revelation_address );
-                await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address, "player2", realjson[ "revelation-address" ] );
+                await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address, "player1", realjson[ "revelation-address" ] );
                 var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
                 var original_quantity_of_sats_in_revelation_address = ( Number( realjson[ "amount" ] ) );
                 var new_quantity_of_sats_for_withdrawing_after_timelock = original_quantity_of_sats_in_revelation_address - 250;
@@ -414,9 +414,10 @@
                 var player2PubkeyForRevelationAddress = realjson[ "player2PubkeyForRevelationAddress" ];
                 var hash = realjson[ "player2Hash" ];
                 var useraddress_for_revelation_address = document.getElementById( "address" ).value;
+                //TODO: I think I fixed the minor error that caused the following withdrawal function to fire every time Player 1 discovered that the money in the revelation address got swept by Player 2. Now I need to test my fix.
                 withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
-                document.getElementById( "status-updates" ).prepend( "$ Aborted because your opponent took too long" + " (error code 01)" );
-//                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
+                //TODO: I think I fixed the minor error that caused the following status update to fire every time Player 1 discovered that the money in the revelation address got swept by Player 2. Now I need to test my fix.
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
         }
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
