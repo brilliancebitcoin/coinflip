@@ -8,7 +8,7 @@ Try the game here: https://brilliancebitcoin.github.io/coinflip/index.html
 
 (2) Don't trust the abort button. There are parts of the game where it is safe to abort (namely, before you've deposited any money into the smart contract) and there are parts where it is unsafe, but the abort button *always* tells you it is safe. (I plan to work on that.) So don't trust it, but do use it to clear your browser storage before and after each game (I store game state in local storage and session storage, and I haven't tested what happens if you play a new game with old state).
 
-(3) You need to play it with testnet coins, I use this faucet: https://bitcoinfaucet.uo1.net/send.php -- I usually send money from the faucet directly into the addresses it tells me, and I usually use the faucet's address as the withdrawal addresses for both players 
+(3) You need to play it with testnet coins, I use this faucet: https://bitcoinfaucet.uo1.net/send.php -- I usually send money from the faucet directly into the addresses the game tells me to send money to, and I usually use the faucet's address as the withdrawal addresses for both players 
 
 (4) Notwithstanding the wonky abort button, I think all needed functionality is present. Meaning, if you follow the procedures outlined in the status messages (and don't hit abort after you've deposited money), the game should work.
 
