@@ -192,7 +192,13 @@
         document.getElementById( "accept-btn" ).addEventListener( "click", function() {
                 document.getElementById( "acceptance-wrapper" ).style.display = "none";
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-ack-status" ) );
-                acceptOrRejectCoinflipOffer( sessionStorage[ "offer-message" ], document.getElementById( "opponent" ).value );
+                var heads_or_tails = ( document.getElementById( "obverse" ).style.display == "block" ) ? "heads":"tails";
+                if ( heads_or_tails == "heads" ) {
+                        var preimage = sessionStorage[ "sixteenBytePreimage" ];
+                } else {
+                        var preimage = sessionStorage[ "seventeenBytePreimage" ];
+                }
+                acceptOrRejectCoinflipOffer( sessionStorage[ "offer-message" ], document.getElementById( "opponent" ).value, preimage );
         });
         function isJsonString( str ) {
             try {
@@ -528,7 +534,7 @@
                         }
                 }
         }
-        function acceptOrRejectCoinflipOffer( decrypted_message, player1 ) {
+        function acceptOrRejectCoinflipOffer( decrypted_message, player1, preimage ) {
                 //player 2 runs this
                 var json = JSON.parse( decrypted_message );
                 //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
@@ -552,7 +558,7 @@
                 var player1Hash = json[ "hash" ];
                 var player1Pubkey = json[ "pubkey" ];
                 var player1PubkeyForRevelationAddress = json[ "pubkeyForRevelationAddress" ];
-                var player2Preimage = getRandom16or17BytePreimage();
+                var player2Preimage = preimage;
                 console.log( "this is player two's preimage:", player2Preimage );
                 console.log( "this is its length:", player2Preimage.length / 2 );
                 var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, "hex" ) ).toString( "hex" );
