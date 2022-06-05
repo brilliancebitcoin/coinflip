@@ -388,6 +388,7 @@
                         var useraddress_for_revelation_address = document.getElementById( "address-one" ).value;
                         revealPreimage( player2Preimage, player1PubkeyForRevelationAddress, player2PrivkeyForRevelationAddress, blocks_to_wait_for_revelation_address, revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_revealing_preimage, useraddress_for_revelation_address );
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-swept" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "checking-who-won-status" ) );
                         console.log( "Almost done! You withdrew from the revelation address." );
                 }
         }
