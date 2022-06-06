@@ -4,6 +4,7 @@
 <script>
         localStorage.clear();
         sessionStorage.clear();
+        sessionStorage[ "status" ] = "just starting out";
 </script>
 <script src="https://bitcoincore.tech/apps/bitcoinjs-ui/lib/bitcoinjs-lib.js"></script>
 <script src="https://bundle.run/varuint-bitcoin@1.1.2"></script>
@@ -59,109 +60,95 @@
 </head>
 <body>
         <h1>This is a work in progress, it doesn't always work yet</h1>
-        <div id="orderbook-wrapper">
-                <h1 style="display: inline-block; vertical-align: middle;">Orderbook</h1>
-                <p style="display: inline-block; vertical-align: middle;"><button id="new-coinflip-btn">Create new coinflip</button></p>
-                <div id="orderbook" style="font-family: monospace;">
-                        <div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">Player 1</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">Amount</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">Expiry</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 74px; text-align: center;">Accept?</div><br>
-                        <div id="empty-msg">The orderbook is currently empty, try creating a coinflip</div>
+        <div id="acceptance-wrapper">
+                <h1>Accept a coinflip</h1>
+                <p>This coinflip site uses a remote coinflipping technique invented in 1981 by Michael Blum. Your opponent picked Heads or Tails and will shortly commit to it via a cryptographic hash on bitcoin's blockchain. Your role is to guess if your opponent picked Heads or Tails. Your opponent cannot change their choice after you guess because the blockchain is irreversible. If you guess correctly, you win the bet amount, otherwise your opponent wins. The rules of the game are enforced by a bitcoin smart contract. There are no third parties involved, only you and your opponent.</p>
+                <p>Try clicking Heads or Tails below. You can see how your guess will appear on the blockchain (like your opponent's choice, your guess is also hashed). It is displayed as a 40 character string under the coin. Be aware that every time you play the game the hashes will be different because they are not literally a hash of the word Heads or the word Tails. The strings are hashes of random numbers that are either 16 bytes long (Heads) or 17 bytes long (Tails).</p>
+                <p>When you are ready to commit to your guess, click Accept. Your opponent will be notified that you accepted their offer. You'll only need to pay money to commit your guess to the blockchain if your opponent agrees to play with you. You can also abort at any time except if your opponent wins (which is sort of an auto-abort situation anyway, one where you also can't get your money back).</p>
+                <p>Your opponent</p>
+                <p><input type="text" id="opponent" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>Amount of sats you can win</p>
+                <p><input type="text" id="amount" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>When this offer expires</p>
+                <p><input type="text" id="expiry" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>The hash of your opponent's choice of Heads or Tails</p>
+                <p><input type="text" id="opp-hash" style="width: 100%; max-width: 350px; background-color: #cccccc;" disabled="true" /></p>
+                <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
+                <p><input type="text" id="address-one" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
+                <p>Bitcoin address where you'd like to receive your deposit back (if you win -- note that this protocol uses two separate addresses for your deposit and your opponent's deposit and it also disperses funds in two separate transactions. Provide two different bitcoin addresses to avoid address reuse, or use the same one if you aren't concerned about privacy.)</p>
+                <p><input type="text" id="address-two" placeholder="tb1b8fsad6tuij76asdf23abbsdfa9baasdf0bo0hm" style="width: 100%; max-width: 350px;" /></p>
+                <p>Your guess</p>
+                <p><button id="heads-btn">Heads</button></p>
+                <p><button id="tails-btn">Tails</button></p>
+                <p><button id="random-btn">Random</button></p>
+                <p><button id="accept-btn">Accept</button></p>
+                <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
+                <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
+                <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #cccccc; font-family: monospace;" />
+        </div>
+        <div id="status-updates-wrapper">
+                <h1>Current status (follow any instructions that appear in the top line)</h1>
+                <div id="status-updates" style="background-color: black; color: lightgreen; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
+                </div>
+                <h1>Upcoming statuses (don't follow any of the instructions in this box til they appear at the top of Current Status)</h1>
+                <div id="upcoming-statuses" style="background-color: black; color: lightgreen; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
+                        <div id="awaiting-acceptance-status" class="status-update">
+                                Waiting for you to accept your opponent's offer or for their offer to expire
+                        </div>
+                        <div id="awaiting-ack-status" class="status-update">
+                                Waiting for your opponent to acknowledge that you accepted their coinflip or for their offer to expire
+                        </div>
+                        <div id="awaiting-your-deposit-status" class="status-update">
+                                Waiting for you to deposit money into your deposit address or for 3 bitcoin blocks to pass by for auto-abortion
+                        </div>
+                        <div id="awaiting-opponents-deposit-status" class="status-update">
+                                Waiting for your opponent to deposit money into their deposit address or for 8 bitcoin blocks to pass by for auto-abortion (and recovery of the money you deposited into your deposit address) -- remember that your opponent may wait for your transaction to confirm 1 to 4 times (which is likely to take about 10 to 40 minutes) before depositing money into their deposit address
+                        </div>
+                        <div id="awaiting-your-guess-status" class="status-update">
+                                Your opponent deposited 1x the bet amount. Waiting for you to reveal your guess (Heads or Tails) or for 4 bitcoin blocks to pass by for auto-abortion
+                        </div>
+                        <div id="checking-who-won-status" class="status-update">
+                                Waiting for your opponent to withdraw their earnings (if you guessed incorrectly) or to withdraw your winnings (if you guessed correctly) after 8 blocks
+                        </div>
+                        <div id="finished-status" class="status-update">
+                                Finished
+                        </div>
+                </div>
+                <div id="invisible-upcoming-statuses" style="display: none;">
+                        <div id="deposit-into-the-coinflip-address-status" class="status-update">
+                                Deposit *exactly* <span id="status-amount"></span> sats into this address: <span id="status-coinflip-address"></span> If you send the wrong amount, even by a little bit, you could automatically lose your money. Remember that if you win you’ll get back your money in 8 blocks, plus your opponent's money. If your opponent wins you will lose your money. If your opponent would have won but aborts after you deposit your money, or if they deposit the wrong amount into their deposit address, you'll get your money back in 8 bitcoin blocks (but probably not theirs, unless you get lucky and they abort after depositing their money). Also, be sure to keep your browser open til the game ends (which is 8 bitcoin blocks after you make your deposit, i.e. hopefully around 80 minutes after you make your deposit). If you close your browser before you withdraw your winnings, you'll abort the protocol and may lose money to your opponent, even if you guessed Heads or Tails correctly. Also, your private keys and cookies could be lost, and you can lose money that way too.
+                        </div>
+                        <div id="your-deposit-detected" class="status-update">
+                                Deposit detected – awaiting result – you should receive 1x the bet amount from your opponent shortly (if not, that means your opponent aborted, and you’ll get your deposit back in 8 blocks, minus a bit in transaction fees)
+                        </div>
+                        <div id="opponents-deposit-detected" class="status-update">
+                                Awaiting 1 confirmation (usually about 10 minutes) on your opponent's deposit transaction before sweeping their money and revealing your guess. (If you watch this screen it will auto update with new instructions once it detects that your opponent's transaction got 1 confirmation.)
+                        </div>
+                        <div id="opponents-deposit-swept" class="status-update">
+                                Your opponent's deposit was swept and you revealed your guess. If you won you can withdraw your winnings in 8 blocks. If your opponent won the money will probably leave the deposit address shortly. (If your opponent won but they choose to abort before sweeping their winnings, you can still take the money in 8 blocks, so keep the browser open til the game ends.)
+                        </div>
+                        <div id="aborted-due-to-timeout-opponents-fault" class="status-update">
+                                Aborted because your opponent took too long
+                        </div>
+                        <div id="aborted-due-to-timeout-your-fault" class="status-update">
+                                Aborted because you took too long
+                        </div>
+                        <div id="aborted-due-to-wrong-amount-opponents-fault" class="status-update">
+                                Aborted because your opponent put the wrong amount in their deposit address
+                        </div>
+                        <div id="aborted-due-to-wrong-amount-your-fault" class="status-update">
+                                Aborted because you put the wrong amount in your deposit address
+                        </div>
+                        <div id="oh-no-you-lost" class="status-update">
+                                Oh no! You lost. :(
+                        </div>
+                        <div id="yay-you-won" class="status-update">
+                                Yay! You won! Your winnings are now being withdrawn to your bitcoin address.
+                        </div>
                 </div>
         </div>
-        <div id="creation-and-status-wrapper" style="display: none;">
-                <div id="creation-wrapper">
-                        <h1>Create a coinflip</h1>
-                        <p>This coinflip site uses a remote coinflipping technique invented in 1981 by Michael Blum. You pick Heads or Tails and commit to it via a cryptographic hash which you will soon publish on bitcoin's blockchain. Your opponent guesses if you picked Heads or Tails, and you cannot change your choice after he or she guesses because the blockchain is irreversible. If your opponent guesses correctly, he or she wins the bet amount, otherwise you win. The rules of the game are enforced by a bitcoin smart contract. There are no third parties involved, only you and your opponent.</p>
-                        <p>Try clicking Heads or Tails below. You can see how your hash will appear on the blockchain, it is displayed as a 40 character string under the coin. Be aware that every time you play the game the hashes will be different because they are not literally a hash of the word Heads or the word Tails. The strings are hashes of random numbers that are either 16 bytes long (Heads) or 17 bytes long (Tails).</p>
-                        <p>When you are ready to commit to your coinflip, click Create. This website will then create an offer and wait for someone to accept it. You'll also get a link you can share if you want to invite someone to accept your coinflip. You won't need to pay money to commit your coinflip to the blockchain til someone accepts your offer. You can also abort at any time except if your opponent wins (which is sort of an auto-abort situation anyway, one where you also can't get your money back).</p>
-                        <p>Bitcoin address where you'd like to receive your opponent's money (if you win)</p>
-                        <p><input type="text" id="address" placeholder="tb1a9baasdf0bo0hmb8fsad6tuij76asdf23abbsdf" style="width: 100%; max-width: 350px;" /></p>
-                        <p>Amount of sats to bet</p>
-                        <p><input type="text" id="amount" placeholder="min 1000, max 10000" style="width: 100%; max-width: 350px;" /></p>
-                        <p><button id="heads-btn">Heads</button></p>
-                        <p><button id="tails-btn">Tails</button></p>
-                        <p><button id="random-btn">Random</button></p>
-                        <p><button id="create-btn">Create</button></p>
-                        <img style="display: block;" id="obverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Washington_Quarter_Silver_1944S_Obverse.png/477px-Washington_Quarter_Silver_1944S_Obverse.png" />
-                        <img style="display: none;" id="reverse" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Washington_Quarter_Silver_1944S_Reverse.png/481px-Washington_Quarter_Silver_1944S_Reverse.png" />
-                        <input id="hash" type="text" disabled="true" style="width: 100%; max-width: 350px; background-color: #cccccc; font-family: monospace;" />
-                </div>
-                <div id="status-updates-wrapper">
-                        <h1>Current status (follow any instructions that appear in the top line)</h1>
-                        <div id="status-updates" style="background-color: black; color: lightgreen; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
-                        </div>
-                        <h1>Upcoming statuses (don't follow any of the instructions in this box til they appear at the top of Current Status)</h1>
-                        <div id="upcoming-statuses" style="background-color: black; color: lightgreen; font-weight: bold; height: 300px; line-height: 25px; padding: 10px; overflow-x: scroll;">
-                                <div id="awaiting-initiation-status" class="status-update">
-                                        Waiting for you to put a coinflip offer on the orderbook
-                                </div>
-                                <div id="awaiting-acceptance-status" class="status-update">
-                                        Waiting for someone to accept your offer or for your offer to expire
-                                </div>
-                                <div id="awaiting-ack-status" class="status-update">
-                                        Waiting for you to acknowledge a user who accepted your coinflip or for your offer to expire
-                                </div>
-                                <div id="awaiting-opponents-deposit-status" class="status-update">
-                                        Waiting for your opponent to deposit money into their deposit address or for 3 bitcoin blocks to pass by for auto-abortion
-                                </div>
-                                <div id="awaiting-your-deposit-status" class="status-update">
-                                        Waiting for you to deposit money into your deposit address or for 4 bitcoin blocks to pass by for auto-abortion
-                                </div>
-                                <div id="awaiting-opponents-guess-status" class="status-update">
-                                        Waiting for your opponent to reveal their guess (Heads or Tails) or for 4 bitcoin blocks to pass by for auto-abortion (and recovery of the money you deposited into your deposit address) -- remember that your opponent may wait for your transaction to confirm 1 to 4 times (which is likely to take about 10 to 40 minutes) before revealing their guess
-                                </div>
-                                <div id="checking-who-won-status" class="status-update">
-                                        Checking if your opponent guessed correctly or not
-                                </div>
-                                <div id="withdrawing-or-acquiescing-status" class="status-update">
-                                        Withdrawing your money (if you won) or acquiescing to your opponent's victory (if your opponent won)
-                                </div>
-                                <div id="finished-status" class="status-update">
-                                        Finished
-                                </div>
-                        </div>
-                        <div id="invisible-upcoming-statuses" style="display: none;">
-                                <div id="link-to-this-page-status" class="status-update">
-                                        With this link you can invite someone to take your coinflip offer: <span id="status-link"></span> Only invite one person per game otherwise you can lose your money because information about the choices you made in this game will be revealed whether you win or lose, and that information can be used by other people to steal your money.
-                                </div>
-                                <div id="deposit-into-the-revelation-address-status" class="status-update">
-                                        Deposit *exactly* <span id="status-amount"></span> sats into this address: <span id="status-revelation-address"></span>. If you send the wrong amount, even by a little bit, you may automatically lose your money. Also, be sure to keep your browser open til the game ends (which is 4 bitcoin blocks after you make your deposit, i.e. hopefully around 40 minutes after you make your deposit). If you close your browser before you withdraw your winnings, you'll abort the protocol and may lose money to your opponent, even if they guessed Heads or Tails wrong. Also, your private keys and cookies could be lost, and you can lose money that way too.
-                                </div>
-                                <div id="your-deposit-detected" class="status-update">
-                                        Your deposit was detected – waiting for your opponent to reveal his guess – if your opponent aborts at this point, you’ll get your deposit back in 4 blocks, minus a bit in transaction fees.
-                                </div>
-                                <div id="opponents-deposit-detected" class="status-update">
-                                        Your opponent's deposit was detected but has not confirmed yet. Awaiting 1 confirmation (usually about 10 minutes) before asking you to make your deposit. Let's not wait for more than 4 confirmations or your opponent may abort. (If you watch this screen it will auto update with new instructions once it detects that your opponent's transaction got 1 confirmation.)
-                                </div>
-                                <div id="opponents-guess-detected" class="status-update">
-                                        Your opponent revealed their guess
-                                </div>
-                                <div id="aborted-due-to-timeout-opponents-fault" class="status-update">
-                                        Aborted because your opponent took too long
-                                </div>
-                                <div id="aborted-due-to-timeout-your-fault" class="status-update">
-                                        Aborted because you took too long
-                                </div>
-                                <div id="aborted-due-to-wrong-amount-opponents-fault" class="status-update">
-                                        Aborted because your opponent put the wrong amount in their deposit address
-                                </div>
-                                <div id="aborted-due-to-wrong-amount-your-fault" class="status-update">
-                                        Aborted because you put the wrong amount in your deposit address
-                                </div>
-                                <div id="oh-no-you-lost" class="status-update">
-                                        Oh no! You lost. :(
-                                </div>
-                                <div id="yay-you-won" class="status-update">
-                                        Yay! You won! Your winnings are now being withdrawn to your bitcoin address.
-                                </div>
-                        </div>
-                </div>
-                <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
-        </div>
+        <img style="display: block; cursor: pointer;" id="abort" src="https://brilliancebitcoin.github.io/coinflip/abort-sign.png" />
 <script>
-        document.getElementById( "new-coinflip-btn" ).addEventListener( "click", function() {
-                document.getElementById( "orderbook-wrapper" ).style.display = "none";
-                document.getElementById( "creation-and-status-wrapper" ).style.display = "block";
-        });
         document.getElementById( "heads-btn" ).addEventListener( "click", function() {
                 document.getElementById( "obverse" ).style.display = "block";
                 document.getElementById( "reverse" ).style.display = "none";
@@ -190,29 +177,41 @@
                 }
         });
         document.getElementById( "abort" ).addEventListener( "click", function() {
-                var conf_message = "If you abort at this stage you won't lose any money and everything will reset. Please click ok if that is what you want or click cancel to continue playing the game.";
+                var conf_message = "If you abort at this stage you won't lose any money and everything will reset. Please click OK if you really want to abort or click cancel to continue playing the game.";
+                if ( sessionStorage[ "status" ].includes( "your-deposit-detected" ) ) {
+                        conf_message = "If you abort at this stage you will lose your deposit. Your opponent cannot take your money at this stage but it will remain stuck in the coinflip address forever because aborting now means you will destroy your private keys. If you abort now and your opponent makes their deposit, he or she can recover his or her deposit after 4 blocks, but they will lose a little bit due to two mining fees: the first is from depositing money into his or her deposit address (because depositing money into any bitcoin address costs a mining fee) and the second is from recovering his or her money in 8 blocks (because withdrawing money from any bitcoin address costs a mining fee). Everything will be reset though (minus your losses) and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to abort or click cancel to continue playing the game.";
+                }
+                if ( sessionStorage[ "status" ].includes( "opponents-deposit-detected" ) ) {
+                        conf_message = "If you abort at this stage you will lose your deposit. Your opponent will lose a little bit due to two mining fees: the first is from depositing money into his or her deposit address (because depositing money into any bitcoin address costs a mining fee) and the second is from recovering his or her money in 4 blocks (because withdrawing money from any bitcoin address costs a mining fee). Everything will be reset for you though (minus your losses) and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to abort or click cancel to continue playing the game.";
+                }
+                if ( sessionStorage[ "status" ].includes( "opponents-deposit-swept" ) ) {
+                        conf_message = "If you are reading this message at this point it means you probably won the coinflip, otherwise your opponent would likely have withdrawn the money from the coinflip address. Since you (likely) won, your browser is just waiting til 8 blocks pass by since you made your deposit. At that point it will automatically broadcast your withdrawal transaction and update your status to show that you definitely won the game. (Be aware that the reason why you are waiting is because there is a timelock on your deposit to give your opponent time to withdraw it if they won.) If you abort at this stage you will delete your private keys and never broadcast your withdrawal transaction, which means you'll never get your deposit back. It will remain stuck in the coinflip address forever. But at least your opponent won't get it, so maybe that's what you want. Everything will be reset for you (minus the fact that you'll never get your deposit back) and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to abort or click cancel to continue waiting.";
+                }
+                if ( sessionStorage[ "status" ].includes( "victory" ) ) {
+                        conf_message = "If you abort at this stage you will not lose any money. You already got the value of your deposit back plus your opponent's money. If it hasn't shown up in your wallet yet, wait a few seconds and check again. Everything will be reset and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to abort or click cancel to continue playing the game.";
+                }
+                if ( sessionStorage[ "status" ].includes( "defeat" ) ) {
+                        conf_message = "If you abort at this stage you will not lose any more money. You already lost the value of your deposit and your opponent took it because you did not guess their coin face correctly. Everything will be reset though and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to abort or click cancel to continue playing the game.";
+                }
+                if ( sessionStorage[ "status" ].includes( "aborted" ) ) {
+                        conf_message = "You can't exactly abort at this stage because you already aborted, but you can reset the game. Doing that won't cause you to lose any money. You already aborted and if you made any deposit, you recovered it (minus any money you might have lost due to mining fees). Everything will be reset for you and you can then try again with some other player (or the same person again, if they still want to play). Please click OK if you really want to reset or click cancel and do nothing.";
+                }
                 if ( confirm( conf_message ) ) {
                         sessionStorage.clear();
                         localStorage.clear();
                         window.location.reload();
                 }
         });
-        document.getElementById( "create-btn" ).addEventListener( "click", function() {
-                var amount = document.getElementById( "amount" ).value;
-                if ( Number( amount ) < 1000 || Number( amount ) > 10000 ) {
-                        alert( "Minimum amount is 1000 sats, maximum is 10000 sats" );
+        document.getElementById( "accept-btn" ).addEventListener( "click", function() {
+                document.getElementById( "acceptance-wrapper" ).style.display = "none";
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-ack-status" ) );
+                var heads_or_tails = ( document.getElementById( "obverse" ).style.display == "block" ) ? "heads":"tails";
+                if ( heads_or_tails == "heads" ) {
+                        var preimage = sessionStorage[ "sixteenBytePreimage" ];
                 } else {
-                        var heads_or_tails = ( document.getElementById( "obverse" ).style.display == "block" ) ? "heads":"tails";
-                        if ( heads_or_tails == "heads" ) {
-                                var preimage = sessionStorage[ "sixteenBytePreimage" ];
-                        } else {
-                                var preimage = sessionStorage[ "seventeenBytePreimage" ];
-                        }
-                        document.getElementById( "creation-wrapper" ).style.display = "none";
-                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-acceptance-status" ) );
-                        createOffer( amount, preimage );
-                        document.getElementById( "status-updates" ).prepend( document.getElementById( "link-to-this-page-status" ) );
+                        var preimage = sessionStorage[ "seventeenBytePreimage" ];
                 }
+                acceptOrRejectCoinflipOffer( sessionStorage[ "offer-message" ], document.getElementById( "opponent" ).value, preimage );
         });
         function isJsonString( str ) {
             try {
@@ -222,27 +221,34 @@
             }
             return true;
         }
-        function processOffer( offer, id, player_ones_nostr_pubkey ) {
+        function displayOffer( offer, id, opponents_nostr_pubkey ) {
                 if ( isJsonString( offer ) && JSON.parse( offer )[ "msgtype" ] && JSON.parse( offer )[ "hash" ] && JSON.parse( offer )[ "amount" ] && JSON.parse( offer )[ "pubkey" ] && JSON.parse( offer )[ "pubkeyForRevelationAddress" ] && JSON.parse( offer )[ "blocks_to_wait" ] && JSON.parse( offer )[ "blocks_to_wait_for_revelation_address" ] &&  JSON.parse( offer )[ "offer_expires" ] ) {
                         var expiry = JSON.parse( offer )[ "offer_expires" ];
-                        var player1 = player_ones_nostr_pubkey;
+                        var player1 = opponents_nostr_pubkey;
                         var amount = JSON.parse( offer )[ "amount" ];
+                        var opp_hash = JSON.parse( offer )[ "hash" ];
                         var current_time = Math.floor( Date.now() / 1000 );
                         if ( expiry > current_time ) {
-                                document.getElementById( "empty-msg" ).style.display = "none";
-                                document.getElementById( "orderbook" ).innerHTML += `<div style="border: 1px solid black; display: inline-block; width: 100px; text-align: center;">` + player1.substring( 0, 12 ) +  `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 100px; text-align: center;">` + amount.toString() + " sats" + `</div><div style="border: 1px solid black; border-left: 0px; display: inline-block; width: 180px; text-align: center;">` + new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString() + `</div><a href="/coinflip/offer.html?id=` + id + `"><div style="border: 1px solid green; border-radius: 5px; width: 60px; margin-left: 7px; display: inline-block; text-align: center; background-color: lightgreen; color: white; font-weight: bold; cursor: pointer;">Accept</div></a><br>`;
+                                document.getElementById( "opponent" ).value = player1;
+                                document.getElementById( "amount" ).value = amount;
+                                document.getElementById( "expiry" ).value = new Date( expiry * 1000 ).toLocaleDateString() + " " + new Date( expiry * 1000 ).toLocaleTimeString();
+                                document.getElementById( "opp-hash" ).value = opp_hash;
+                        } else {
+                                document.body.innerHTML = "";
+                                document.body.innerHTML = "Sorry! This offer expired.";
                         }
-
                 }
         }
 </script>
 <script>
         window.onload = function() {
                 document.getElementById( "random-btn" ).click();
-                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-initiation-status" ) );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-acceptance-status" ) );
         }
 </script>
 <script>
+        var queryString = window.location.search;
+        var urlParams = new URLSearchParams(queryString);
         function normalizeRelayURL(e){let[t,...r]=e.trim().split("?");return"http"===t.slice(0,4)&&(t="ws"+t.slice(4)),"ws"!==t.slice(0,2)&&(t="wss://"+t),t.length&&"/"===t[t.length-1]&&(t=t.slice(0,-1)),[t,...r].join("?")}
         var relay = "wss://nostr-relay.wlvs.space";
         relay = normalizeRelayURL( relay );
@@ -257,15 +263,17 @@
         sessionStorage[ "selfsubscription" ] = subscription;
         setTimeout( function() {socket.send( sessionStorage[ "selfsubscription" ] );}, 1000 );
 
-        var filter = {
-                "kinds": [
-                        40
-                ]
-        };
-        var subscription2 = [ "REQ", "get-kind-forty", filter ];
-        subscription2 = JSON.stringify( subscription2 );
-        sessionStorage[ "kindfortysub" ] = subscription2;
-        setTimeout( function() {socket.send( sessionStorage[ "kindfortysub" ] );}, 1000 );
+        if ( urlParams.get( "id" ) ) {
+                var filter = {
+                        "ids": [
+                                urlParams.get( "id" )
+                        ]
+                };
+                var subscription2 = [ "REQ", "get-url-event", filter ];
+                subscription2 = JSON.stringify( subscription2 );
+                sessionStorage[ "urlevent" ] = subscription2;
+                setTimeout( function() {socket.send( sessionStorage[ "urlevent" ] );}, 1000 );
+        }
 
         function subscribe( pubkey ) {
           var filter = {
@@ -302,7 +310,8 @@
                 } else if ( event[ 2 ].kind == 1 ) {
                         console.log( event[ 2 ].content + " (sent publicly by " + event[ 2 ].pubkey + ")" );
                 } else if ( event[ 2 ].kind == 40 ) {
-                        processOffer( event[ 2 ].content, event[ 2 ].id, event[ 2 ].pubkey );
+                        sessionStorage[ "offer-message" ] = event[ 2 ].content
+                        displayOffer( event[ 2 ].content, event[ 2 ].id, event[ 2 ].pubkey );
                 }
         });
 </script>
@@ -383,6 +392,9 @@
                         document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                         document.getElementById( "upcoming-statuses" ).innerHTML = "";
                 } else {
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-your-guess-status" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-detected" ) );
+                        sessionStorage[ "status" ] += " opponents-deposit-detected";
                         confLooper( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2 );
                         await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address_as_player_2, "player2", realjson[ "revelation-address" ] );
                         var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
@@ -393,20 +405,21 @@
                         var player1PubkeyForRevelationAddress = realjson[ "player1PubkeyForRevelationAddress" ];
                         var player2Preimage = realjson[ "player2Preimage" ];
                         var hash = realjson[ "player2Hash" ];
-                        var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
+                        var useraddress_for_revelation_address = document.getElementById( "address-one" ).value;
                         revealPreimage( player2Preimage, player1PubkeyForRevelationAddress, player2PrivkeyForRevelationAddress, blocks_to_wait_for_revelation_address, revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_revealing_preimage, useraddress_for_revelation_address );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-swept" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "checking-who-won-status" ) );
+                        sessionStorage[ "status" ] += " opponents-deposit-swept";
                         console.log( "Almost done! You withdrew from the revelation address." );
                 }
         }
         async function sweepMoneyFromRevelationAddressAsPlayer1( realjson ) {
                 //player 1 runs this
                 var revelation_txid = await addyLooper( realjson[ "revelation-address" ], "player1", "sweepFromRevelationAddress" );
-                document.getElementById( "status-updates" ).prepend( document.getElementById( "your-deposit-detected" ) );
-                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-guess-status" ) );
                 sessionStorage[ revelation_txid ] = "0";
                 var blocks_to_wait_for_revelation_address = Number( realjson[ "blocks_to_wait_for_revelation_address" ] );
                 confLooper( revelation_txid, blocks_to_wait_for_revelation_address );
-                await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address, "player1", realjson[ "revelation-address" ] );
+                await waitForTheRightNumberOfConfs( revelation_txid, blocks_to_wait_for_revelation_address, "player2", realjson[ "revelation-address" ] );
                 var revelation_txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "revelation-address" ], revelation_txid );
                 var original_quantity_of_sats_in_revelation_address = ( Number( realjson[ "amount" ] ) );
                 var new_quantity_of_sats_for_withdrawing_after_timelock = original_quantity_of_sats_in_revelation_address - 250;
@@ -414,10 +427,8 @@
                 var player1PubkeyForRevelationAddress = realjson[ "player1PubkeyForRevelationAddress" ];
                 var player2PubkeyForRevelationAddress = realjson[ "player2PubkeyForRevelationAddress" ];
                 var hash = realjson[ "player2Hash" ];
-                var useraddress_for_revelation_address = document.getElementById( "address" ).value;
-                //TODO: I think I fixed the minor error that caused the following withdrawal function to fire every time Player 1 discovered that the money in the revelation address got swept by Player 2. Now I need to test my fix.
+                var useraddress_for_revelation_address = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
                 withdrawFromRevelationAddressAfterTimelockAsPlayer1( revelation_txid, revelation_txindex, original_quantity_of_sats_in_revelation_address, new_quantity_of_sats_for_withdrawing_after_timelock, player1PrivkeyForRevelationAddress, player2PubkeyForRevelationAddress, Number( realjson[ "blocks_to_wait_for_revelation_address" ] ), hash, useraddress_for_revelation_address );
-                //TODO: I think I fixed the minor error that caused the following status update to fire every time Player 1 discovered that the money in the revelation address got swept by Player 2. Now I need to test my fix.
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                 document.getElementById( "upcoming-statuses" ).innerHTML = "";
@@ -425,12 +436,19 @@
         async function sweepMoneyFromCoinflipAddressAsPlayer2( realjson ) {
                 //player 2 runs this
                 var coinflip_txid = await addyLooper( realjson[ "coinflip-address" ], "player2", "sweepFromCoinflipAddress" );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "your-deposit-detected" ) );
+                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-deposit-status" ) );
+                sessionStorage[ "status" ] += " your-deposit-detected";
                 sessionStorage[ coinflip_txid ] = "0";
                 confLooper( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ) );
                 var didILose = await waitForTheRightNumberOfConfs( coinflip_txid, Number( realjson[ "blocks_to_wait" ] ), "player2", realjson[ "coinflip-address" ] );
                 //Stop running "waitfortherightnumberofconfs" if I see that the other party withdrew the money, i.e. if the address has a spent txo, and alert the player that they lost.
                 if ( didILose == "You lost :(" ) {
-                        alert( "Oh no! You lost :(" );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "oh-no-you-lost" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
+                        sessionStorage[ "status" ] += " defeat";
+                        console.log( "Oh no, you lost. :(" );
                 } else {
                         var txindex = await getOutputNumberOfTxThatSentMeMoney( realjson[ "coinflip-address" ], coinflip_txid );
                         var original_quantity_of_sats = ( Number( realjson[ "amount" ] ) * 2 );
@@ -443,8 +461,12 @@
                         var randomPreimage1 = getRandom16or17BytePreimage();
                         var randomPreimage2 = getRandom16or17BytePreimage();
                         var blocks_to_wait = realjson[ "blocks_to_wait" ];
-                        var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
+                        var useraddress = document.getElementById( "address-two" ).value;
                         player2WonCoinflip( coinflip_txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player2Privkey, player2Pubkey, player1Pubkey, randomPreimage1, randomPreimage2, blocks_to_wait, useraddress, player1Hash, player2Hash );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "yay-you-won" ) );
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
+                        document.getElementById( "upcoming-statuses" ).innerHTML = "";
+                        sessionStorage[ "status" ] += " victory";
                         console.log( "Done! You won the bet!" );
                 }
         }
@@ -454,6 +476,10 @@
                 var realjson = JSON.parse( localStorage[ "coinflip-private-info" ] );
                 console.log( "here are the contents of coinflip-private-info at the point when I am trying to write a script to sweep the revelation address:", realjson );
                 if ( json[ "player2Hash" ] == realjson[ "player2Hash" ] ) {
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-your-deposit-status" ) );
+                        document.getElementById( "status-amount" ).innerText = ( Number( realjson[ "amount" ] ) * 2 ).toString();
+                        document.getElementById( "status-coinflip-address" ).innerText = realjson[ "coinflip-address" ];
+                        document.getElementById( "status-updates" ).prepend( document.getElementById( "deposit-into-the-coinflip-address-status" ) );
                         console.log( "Send", ( Number( realjson[ "amount" ] ) * 2 ), "sats to this address:" );
                         console.log( realjson[ "coinflip-address" ] );
                         //run a sweep function that takes money out of the revelation address after however many confs you agreed on for the revelation address
@@ -485,10 +511,7 @@
                         console.log( "witness script for revelation address:", witness_script_for_revelation_address );
                         var p2wsh_for_revelation_address = bitcoinjs.payments.p2wsh({redeem: {output: witness_script_for_revelation_address, network: bitcoinjs.networks.testnet}, network: bitcoinjs.networks.testnet });
                         var revelation_address = p2wsh_for_revelation_address.address;
-                        if ( p2wsh.address == json[ "coinflip-address" ] && revelation_address == claimedRevelationAddress && sessionStorage[ "status" ] != "accept-no-more-takers" ) {
-                                //update the status indicator
-                                sessionStorage[ "status" ] = "accept-no-more-takers";
-                                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-ack-status" ) );
+                        if ( p2wsh.address == json[ "coinflip-address" ] && revelation_address == claimedRevelationAddress ) {
                                 //update the private info
                                 var coinflip_private_info = JSON.parse( localStorage[ "coinflip-private-info" ] );
                                 coinflip_private_info[ "coinflip-address" ] = p2wsh.address;
@@ -505,22 +528,14 @@
                                 message[ "player2Hash" ] = player2Hash;
                                 message = JSON.stringify( message );
                                 makePrivateNote( message, player2 );
-                                //update the status indicator
-                                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-ack-status" ) );
-                                document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-opponents-deposit-status" ) );
                                 //listen for a transaction into the coinflip address and if it arrives with an amount 2x the bet amount, await 1 confirmation
                                 var coinflip_txid = await addyLooper( p2wsh.address, "player1", "depositIntoRevelationAddress" );
-                                document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-deposit-detected" ) );
                                 //Player 1 aborts (by not depositing money into the revelation address) if the coinflip address does not have money in it within 3 blocks after the game starts. The logic for this is in addyLooper.
                                 sessionStorage[ coinflip_txid ] = "0";
                                 var actual_amount_in_coinflip_address = await getAmountOfTxThatSentMeMoney( p2wsh.address, coinflip_txid );
                                 if ( Number( actual_amount_in_coinflip_address ) >= ( Number( realjson[ "amount" ] ) * 2 ) ) {
                                         confLooper( coinflip_txid, 1 );
                                         var confs = await waitForTheRightNumberOfConfs( coinflip_txid, 1, "player1", coinflip_private_info[ "coinflip-address" ] );
-                                        document.getElementById( "status-updates" ).prepend( document.getElementById( "awaiting-your-deposit-status" ) );
-                                        document.getElementById( "status-amount" ).innerText = ( Number( realjson[ "amount" ] ) ).toString();
-                                        document.getElementById( "status-revelation-address" ).innerText = coinflip_private_info[ "revelation-address" ];
-                                        document.getElementById( "status-updates" ).prepend( document.getElementById( "deposit-into-the-revelation-address-status" ) );
                                         console.log( "Send", ( Number( coinflip_private_info[ "amount" ] ) ), "sats to this address:" );
                                         //The following sweep function sweeps money out of the revelation address if necessary after awaiting however many confs were agreed upon for the revelation address.
                                         //Remember that the revelation address should expire 4 blocks before the coinflip address, but since I assume it is possible that the player 2 has two blocks that player 1 doesn't know about, I also must assume it is possible for the revelation address to expire only 2 blocks before the coinflip address. Still, that shouldn't change anything if it happens, player 1 should still just abort and withdraw their money at that point, which should be plenty of time before player 2 can do anything nefarious.
@@ -528,13 +543,10 @@
                                         sweepMoneyFromRevelationAddressAsPlayer1( coinflip_private_info );
                                         console.log( coinflip_private_info[ "revelation-address" ] );
                                         var player2Preimage = await preimageLooper( coinflip_private_info[ "revelation-address" ], coinflip_private_info[ "player2Hash" ] );
-                                        document.getElementById( "status-updates" ).prepend( document.getElementById( "opponents-guess-detected" ) );
                                         var player2PreimageLength = player2Preimage.length / 2;
                                         var player1Preimage = coinflip_private_info[ "player1Preimage" ];
                                         var player1PreimageLength = player1Preimage.length / 2;
-                                        document.getElementById( "status-updates" ).prepend( document.getElementById( "checking-who-won-status" ) );
                                         if ( player2PreimageLength != player1PreimageLength ) {
-                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "withdrawing-or-acquiescing-status" ) );
                                                 var txid = coinflip_txid;
                                                 var txindex = await getOutputNumberOfTxThatSentMeMoney( p2wsh.address, coinflip_txid );
                                                 var original_quantity_of_sats = Number( actual_amount_in_coinflip_address );
@@ -542,30 +554,23 @@
                                                 var player1Privkey = coinflip_private_info[ "player1Privkey" ];
                                                 var player1Pubkey = coinflip_private_info[ "player1Pubkey" ];
                                                 var player2Pubkey = coinflip_private_info[ "player2Pubkey" ];
-                                                var useraddress = document.getElementById( "address" ).value;
+                                                var useraddress = "tb1ql7w62elx9ucw4pj5lgw4l028hmuw80sndtntxt";
                                                 player1WonCoinflip( txid, txindex, original_quantity_of_sats, new_quantity_of_sats, player1Privkey, player1Pubkey, player2Pubkey, player1Preimage, player2Preimage, blocks_to_wait, useraddress );
-                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "yay-you-won" ) );
-                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
-                                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                                                 console.log( "Done! You won the bet!" );
                                         } else {
-                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "oh-no-you-lost" ) );
-                                                document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
-                                                document.getElementById( "upcoming-statuses" ).innerHTML = "";
                                                 console.log( "I lost. :(" );
                                         }
                                 }
                         }
                 }
         }
-        function acceptOrRejectCoinflipOffer( decrypted_message, player1 ) {
+        function acceptOrRejectCoinflipOffer( decrypted_message, player1, preimage ) {
                 //player 2 runs this
                 var json = JSON.parse( decrypted_message );
-                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
                 var blocks_to_wait = Number( json[ "blocks_to_wait" ] );
                 var blocks_to_wait_for_revelation_address = Number( json[ "blocks_to_wait_for_revelation_address" ] );
                 var amount = Number( json[ "amount" ] );
-                //Note: The minimum wait time for the coinflip address that player 1 will accept is 8 blocks, see the todo under the function "acceptOrRejectCoinflipOffer" for reasons why. Player 2 sets a maximum of 1 more than that so that he doesn't have to wait forever.
+                //Note: The minimum wait time for the coinflip address that player 1 will accept is 8 blocks, see the note under the function "acceptOrRejectCoinflipOffer" for reasons why. Player 2 sets a maximum of 1 more than that so that he doesn't have to wait forever.
                 var maximum_blocks_to_wait = 9;
                 if ( blocks_to_wait > maximum_blocks_to_wait ) {
                         return;
@@ -582,7 +587,7 @@
                 var player1Hash = json[ "hash" ];
                 var player1Pubkey = json[ "pubkey" ];
                 var player1PubkeyForRevelationAddress = json[ "pubkeyForRevelationAddress" ];
-                var player2Preimage = getRandom16or17BytePreimage();
+                var player2Preimage = preimage;
                 console.log( "this is player two's preimage:", player2Preimage );
                 console.log( "this is its length:", player2Preimage.length / 2 );
                 var player2Hash = bitcoinjs.crypto.hash160( buffer.Buffer.from( player2Preimage, "hex" ) ).toString( "hex" );
@@ -642,10 +647,9 @@
                 var player1KeypairForRevelationAddress = bitcoinjs.ECPair.makeRandom();
                 var player1PrivkeyForRevelationAddress = player1KeypairForRevelationAddress.__D.toString( "hex" );
                 var player1PubkeyForRevelationAddress = player1KeypairForRevelationAddress.publicKey.toString( "hex" );
-                //Note: The minimum wait time for the revelation address that player 2 will accept is 4 blocks, see the todo under the function "acceptOrRejectCoinflipOffer" for reasons why. A consequence of this is that the minimum wait time for the coinflip address should be 8 blocks. That is for several reasons, one of which is, Player 1 doesn't know if player 2 has 2 blocks that player 1 doesn't know about. Therefore Player 1 should not deposit money into the revelation address if the coinflip address is within 6 blocks of expiring, because otherwise player 2 could delay revealing their preimage until the revelation address's 4 blocks expire, which would be after (or at the same time as) they can withdraw money from the coinflip address. That would allow them to get Alice's money even if Alice won the coinflip, without giving Alice any recourse. Which means the minimum number of confs that player 1 should accept for the coinflip address is 8 if the wait time for the revelation address is 4 blocks. (Generalizing, player 1 should have a rule that the minimum wait time for the coinflip address be 4 more than the wait time for the revelation address, that way there is a next-to-impossible chance that player 2 can withdraw their money before player 1 can determine if they won the game. Also notable is that if the wait time for the coinflip address was only 3 more than the wait time for the revelation address, and if player 2 had 2 blocks that player 1 did not know about, player 2's withdrawal transaction would be valid at the same time as player 1's withdrawal transaction, creating a race condition. So player 1's minimum acceptable wait time for the coinflip address should be 4 more than the wait time of the revelation address.)
+                //Note: The minimum wait time for the revelation address that player 2 will accept is 4 blocks, see the note under the function "acceptOrRejectCoinflipOffer" for reasons why. A consequence of this is that the minimum wait time for the coinflip address should be 8 blocks. That is for several reasons, one of which is, Player 1 doesn't know if player 2 has 2 blocks that player 1 doesn't know about. Therefore Player 1 should not deposit money into the revelation address if the coinflip address is within 6 blocks of expiring, because otherwise player 2 could delay revealing their preimage until the revelation address's 4 blocks expire, which would be after (or at the same time as) they can withdraw money from the coinflip address. That would allow them to get Alice's money even if Alice won the coinflip, without giving Alice any recourse. Which means the minimum number of confs that player 1 should accept for the coinflip address is 8 if the wait time for the revelation address is 4 blocks. (Generalizing, player 1 should have a rule that the minimum wait time for the coinflip address be 4 more than the wait time for the revelation address, that way there is a next-to-impossible chance that player 2 can withdraw their money before player 1 can determine if they won the game. Also notable is that if the wait time for the coinflip address was only 3 more than the wait time for the revelation address, and if player 2 had 2 blocks that player 1 did not know about, player 2's withdrawal transaction would be valid at the same time as player 1's withdrawal transaction, creating a race condition. So player 1's minimum acceptable wait time for the coinflip address should be 4 more than the wait time of the revelation address.)
                 var blocks_to_wait = "8";
                 var blocks_to_wait_for_revelation_address = "4";
-                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
                 var message = {}
                 message[ "msgtype" ] = "initiation";
                 message[ "hash" ] = player1Hash;
@@ -690,7 +694,6 @@
                 var player1PubkeyForRevelationAddress = player1KeypairForRevelationAddress.publicKey.toString( "hex" );
                 var blocks_to_wait = "8";
                 var blocks_to_wait_for_revelation_address = "4";
-                //TODO: ensure each player can modify what wait times they'll accept for the coinflip address and the revelation address
                 var message = {}
                 message[ "msgtype" ] = "offer";
                 message[ "hash" ] = player1Hash;
@@ -759,7 +762,7 @@
                         }
                         console.log( "block_when_game_started:", Number( sessionStorage[ "block_when_game_started" ] ) );
                         if ( Number( current_blockheight ) >= Number( sessionStorage[ "block_when_game_started" ] ) + 3 ) {
-                                sessionStorage[ "status" ] = "aborted";
+                                sessionStorage[ "status" ] += " aborted";
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "aborted-due-to-timeout-opponents-fault" ) );
                                 document.getElementById( "status-updates" ).prepend( document.getElementById( "finished-status" ) );
                                 document.getElementById( "upcoming-statuses" ).innerHTML = "";
@@ -769,7 +772,7 @@
                 return new Promise( async function( resolve, reject ) {
                         var txid = await getIdOfTxThatSentMeMoney( address );
                         if ( txid == "none" ) {
-                                if ( sessionStorage[ "status" ] == "aborted" ) {
+                                if ( sessionStorage[ "status" ].includes( "aborted" ) ) {
                                         resolve( "none" );
                                 } else {
                                         setTimeout( async function() {
@@ -1417,13 +1420,7 @@
                                                         sessionStorage.sendable = JSON.stringify( sendable );
                                                         console.log( "here is what you will send:", sendable );
                                                         socket.send( '["EVENT",' + JSON.stringify( JSON.parse( sessionStorage.sendable )[ 1 ] ) + ']' );
-                                                        if ( window.location.href.includes( "/index.html" ) || window.location.href.includes( "/interface.html" ) ) {
-                                                                var endtag = ( window.location.href.includes( "/index.html" ) ) ? "/index.html":"/interface.html";
-                                                                document.getElementById( "status-link" ).innerText = window.location.href.substring( 0, window.location.href.indexOf( endtag ) ) + "/offer.html?id=" + msghash;
-                                                        } else {
-                                                                document.getElementById( "status-link" ).innerText = window.location.href + "/offer.html?id=" + msghash;
-                                                        }
-                                                }
+                                                 }
                                         }
                                );
                         }
