@@ -10,7 +10,7 @@ Try the game here: https://brilliancebitcoin.github.io/coinflip/index.html
 
 (3) I store game state and private keys in browser storage and I clear the browser storage every time you reload the page, so don't hit refresh til your game is done
 
-(4) All needed functionality is present. If you follow the procedures outlined in the status messages (and don't hit abort after you've deposited money), the game should work
+(4) All needed functionality is present. If you follow the procedures outlined in the status messages (and don't hit abort after you've deposited money), the game should work great
 
 (5) I haven't tested what happens if you play the game in two browser sessions that share the same browser storage. It will probably break. So far I always test it with one window in incognito mode and I recommend doing that if you want it to work
 
