@@ -1,6 +1,6 @@
 # How to play
 
-Try the game here: https://brilliancebitcoin.github.io/coinflip/index.html
+Try the game here: https://brilliancebitcoin.github.io/coinflip/
 
 # Notes on its status as a work-in-progress
 
