@@ -1,6 +1,8 @@
 # How to play
 
-Try the game here: https://brilliancebitcoin.github.io/coinflip/
+You used to be able to try the game here: https://brilliancebitcoin.github.io/coinflip/
+
+But that link no longer works because now my github takes all traffic and pushes it to anigma. I will work on moving coinflip to a new username.
 
 # How it works
 
@@ -24,7 +26,7 @@ My coinflip game also uses a timelock: once money is deposited into the coinflip
 
 # Notes on its status as a work-in-progress
 
-(1) I know, it's absolutely horrendous in appearance -- maybe someday it will look pretty but I am not a frontend guy
+(1) I know, it's absolutely horrendous in appearance -- maybe someday it will look pretty but I am not a frontend girl
 
 (2) You need to play it with testnet coins, I use this faucet: https://bitcoinfaucet.uo1.net/send.php -- I usually send money from the faucet directly into the addresses the game tells me to send money to, and I usually use the faucet's address as the withdrawal addresses for both players
 
