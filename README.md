@@ -2,6 +2,10 @@
 
 Click here: https://brilliancebitcoin.github.io/coinflip/
 
+# Inspiration
+
+https://www.researchhub.com/paper/615586/note-on-fair-coin-toss-via-bitcoin
+
 # How it works
 
 ## Remote coinflipping
